@@ -2,9 +2,8 @@
 /* jshint node: true */
 "use strict";
 
-const app_ver = "ver 1.2.0";
-const app_title = "MetaCoin MainNode";
-const listen_port = 20922;
+const app_ver = "ver 2.1.0";
+const app_title = "MetaCoin node";
 const config = require('./config.json');
 const mtcUtil = require("./mtcUtil");
 console.log(app_title + " " + app_ver);
@@ -19,7 +18,10 @@ const rocks = require('level-rocksdb');
 const BigNumber = require('bignumber.js');
 
 const requestModule = require('request');
-const request = requestModule.defaults({});
+const request = requestModule.defaults({
+    timeout: 10000
+    //	proxy: 'http://192.168.10.2:8888'
+});
 
 const app = express();
 
@@ -74,7 +76,18 @@ function getTransactions(tx_id, db_id, db_sn, tx_idx) {
                 case "Chaincode Install or Update":
                     break;
                 case "NewWallet":
+                    var fix_key = d.parameters[1].replace(/(\r\n|\n|\r|-----BEGIN PUBLIC KEY-----|-----END PUBLIC KEY-----)/gm, "").trim();
+                    db.get('ADDR_BY_PUBLICKEY:' + fix_key)
+                    .then(function (value) {
+                        var a = JSON.parse(value);
+                        a.push(d.parameters[0]);
+                        db.put('ADDR_BY_PUBLICKEY:' + fix_key,JSON.stringify(a));
+                    })
+                    .catch(function (err) {
+                        db.put('ADDR_BY_PUBLICKEY:' + fix_key, JSON.stringify([d.parameters[0]]));
+                    });
                 case "transfer":
+                case "multi_transfer":
                 case "stodexRegister":
                 case "mrc030create":
                     d.values.tx_id = tx_id;
@@ -190,7 +203,6 @@ function getTransactions(tx_id, db_id, db_sn, tx_idx) {
     });
 }
 
-
 function getFabricBlock() {
     request.get(config.MTCBridge + "/block/" + max_db_number, function (error, response, body) {
         if (error != null) {
@@ -273,7 +285,9 @@ function get_address(req, res) {
     var return_value = [];
     db.createReadStream({
         gte: "ADDRESS:LOG:" + req.params.address + ":00000000000000000000000000000000",
-        lte: "ADDRESS:LOG:" + req.params.address + ":99999999999999999999999999999999"
+        lte: "ADDRESS:LOG:" + req.params.address + ":99999999999999999999999999999999",
+	limit: 50,
+	reserve: true
     })
         .on('data', function (data) {
             return_value.push(data.value);
@@ -389,6 +403,50 @@ function get_token(req, res) {
         });
 }
 
+function get_totalsupply(req, res) {
+    db.get('TOKEN:DB:' + mtcUtil.NumberPadding(req.params.token_id))
+        .then(function (value) {
+            var data = JSON.parse(value);
+            if (data.type == undefined || data.type == "") {
+                data.type = "010";
+            }
+            data.circulation_supply = BigNumber(data.totalsupply);
+            db.get('ADDRESS:CURRENT:' + data.owner)
+                .then(function (value) {
+                    var a = JSON.parse(value);
+                    for (var k in a.pending) {
+                        a.balance.push({
+                            balance: "0",
+                            token: k,
+                            unlockdate: "0",
+                            pending: a.pending[k]
+                        });
+                    }
+                    var tx;
+                    for (var t in a.balance) {
+                        if (a.balance[t].token != req.params.token_id) {
+                            continue;
+                        }
+                        try {
+                            tx = BigNumber(a.balance[t].balance);
+                        } catch (e) {
+                            console.log(e);
+                            continue;
+                        }
+                        data.circulation_supply = data.circulation_supply.minus(tx);
+                    }
+		    res.send(""+data.circulation_supply/Math.pow(10, data.decimal));
+                })
+                .catch(function (err) {
+                    console.log(err);
+                    res.send(JSON.stringify(data));
+                });
+        })
+        .catch(function (err) {
+            console.log(err);
+            res.status(404).send(err, res, 'Token ' + req.params.token_id + ' not found');
+        });
+}
 function get_mrc020(req, res) {
     var ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
     console.log(ip, req.url);
@@ -768,6 +826,71 @@ function post_transfer(req, res) {
         res.send(data.data);
     });
 }
+
+
+
+function post_multitransfer(req, res, next) {
+    res.header('Cache-Control', 'no-cache');
+    var data = "";
+    // req.body.unlockdate = "0";
+    mtcUtil.ParameterCheck(req.body, 'from', "address");
+    mtcUtil.ParameterCheck(req.body, 'transferlist');
+    mtcUtil.ParameterCheck(req.body, 'token', "int");
+    mtcUtil.ParameterCheck(req.body, 'checkkey');
+    mtcUtil.ParameterCheck(req.body, 'signature');
+
+    try{
+        data = JSON.parse(req.body.transferlist);
+    } catch (e) {
+        return next(new Error('The transferlist must be a json encoded array'));
+    }
+
+    if (Array.isArray(data) == false){
+        return next(new Error('The transferlist must be a json encoded array'));
+    }
+    if (data.length > 100 ){
+        return next(new Error('There must be no more than 100 recipients of multitransfer'));
+    }
+
+    for (var key in data){
+        mtcUtil.ParameterCheck(data[key], 'address', "address");
+        mtcUtil.ParameterCheck(data[key], 'amount', 'int', 1, 99);
+        mtcUtil.ParameterCheck(data[key], 'unlockdate', 'int');
+
+        if (req.body.from == data[key].address) {
+            return next(new Error('The from address and to addressare the same.'));
+        }
+    }
+
+    request.post({
+        url: config.MTCBridge + "/multitransfer",
+        form: req.body
+    }, function (error, response, body) {
+        if (error != null) {
+            res.status(412).send("MTC Server connection error");
+            return;
+        }
+
+        try {
+            var data = JSON.parse(body);
+        } catch (err) {
+            console.log(err);
+            res.status(404).send(err.message);
+
+        }
+        if (data == null || data.result == undefined) {
+            res.status(404).send('MTC Main node response error');
+            return;
+        }
+        if (data.result != 'SUCCESS') {
+            res.status(404).send(data.msg);
+            return;
+        }
+
+        res.send(data.data);
+    });
+}
+
 
 
 function get_key(req, res) {
@@ -1732,6 +1855,23 @@ function delete_mrc100_logger(req, res) {
     });
 }
 
+
+function post_address_by_key(req, res) {
+    mtcUtil.ParameterCheck(req.body, 'publickey');
+	console.log("@" + req.body.publickey + "@");
+
+    var fix_key =  req.body.publickey.replace(/(\\n|\\r|\r|\n|-----BEGIN PUBLIC KEY-----|-----END PUBLIC KEY-----)/gm, "").trim();
+	console.log("["+fix_key+"]");
+    db.get('ADDR_BY_PUBLICKEY:' + fix_key)
+    .then(function (value) {
+        res.send(JSON.parse(value));
+    })
+    .catch(function (err) {
+        res.status(404).send('Address not found');
+    });
+}
+
+
 // not chain code.
 app.get('/block', get_block_number);
 app.get('/block/:block', get_block);
@@ -1744,13 +1884,16 @@ app.get('/balance/:address', get_balance);
 // wallet
 app.get('/address/:address', get_address);
 app.post('/address', upload.array(), post_address);
+app.post('/address/bykey', upload.array(), post_address_by_key);
 
 // transfer and exchange
 app.post('/transfer', upload.array(), post_transfer);
+app.post('/multitransfer', upload.array(), post_multitransfer);
 app.post('/exchange/:fromTkey/:toTkey', upload.array(), post_exchange);
 
 // token
 app.get('/token/:token_id', get_token);
+app.get('/totalsupply/:token_id', get_totalsupply);
 app.post('/token', upload.array(), post_token);
 app.put('/token/update/:tkey', upload.array(), put_token);
 app.post('/token/:tkey', upload.array(), post_token_save);
@@ -1820,24 +1963,9 @@ try {
             getFabricBlock();
         });
     });
-    if (config.IS_TESTNET == false) {
-        createServer({
-            email: 'leslie@inblock.co', // Emailed when certificates expire.
-            agreeTos: true, // Required for letsencrypt.
-            debug: false, // Add console messages and uses staging LetsEncrypt server. (Disable in production)
-            store: require('greenlock-store-fs'),
-            domains: ["rest.metacoin.network"], // List of accepted domain names. (You can use nested arrays to register bundles with LE).
-            dir: "/home/MTCNode/letsencrypt/etc", // Directory for storing certificates. Defaults to "~/letsencrypt/etc" if not present.
-            ports: {
-                http: listen_port,
-                https: 20923
-            }
-        }, app);
-    } else {
-        http.createServer(app).listen(listen_port, function () {
-            console.log(app_title + ' listening on port ' + listen_port);
-        });
-    }
+    http.createServer(app).listen(config.port, function () {
+        console.log(app_title + ' listening on port ' + config.port);
+    });
 } catch (err) {
     console.log(err)
     console.error(app_title + ' port ' + listen_port + ' bind error');

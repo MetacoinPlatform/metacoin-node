@@ -1,6 +1,6 @@
 {
-  "name": "mtc-node",
-  "version": "1.2.0",
+  "name": "metacoin-node",
+  "version": "2.1.0",
   "main": "mtcnode.js",
   "description": "MetaCoin Node",
   "dependencies": {
