@@ -1,0 +1,5 @@
+node_modules/*
+.cvsignore
+CVS/*
+*.bak
+config.json
