@@ -1,6 +1,5 @@
-{
-  "MTCBridge" : "http://127.0.0.1:20920",
-  "DB_PATH" : "./db",
-  "port": 20922,
-  "port": 20922
-}
+{
+  "MTCBridge" : "http://127.0.0.1:20920",
+  "DB_PATH" : "./db",
+  "port": 20922
+}
