@@ -62,7 +62,6 @@ function getTransactions(tx_id, db_id, db_sn, tx_idx) {
 
         let save_data = [];
         let save_addr = ""
-        console.log('Get Transaction ', db_id, db_sn, tx_id);
         /* data struct
             {
              result: 'SUCCESS',
@@ -99,7 +98,6 @@ function getTransactions(tx_id, db_id, db_sn, tx_idx) {
             d.db_sn = db_sn;
             save_addr = "";
             if (d.validationCode != 0) {
-                console.log(d);
                 return;
             }
             switch (d.type) {
@@ -337,7 +335,6 @@ function getTransactions(tx_id, db_id, db_sn, tx_idx) {
             }
 
             if (save_addr != "") {
-                console.log('Address update', save_addr, d.values);
                 save_data.push({
                     type: 'put',
                     key: "ADDRESS:CURRENT:" + save_addr,
