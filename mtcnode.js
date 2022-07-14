@@ -2,7 +2,7 @@
 /* jshint node: true */
 "use strict";
 
-const app_ver = "ver 2.1.0";
+const app_ver = "ver 2.2.0";
 const app_title = "MetaCoin node";
 const config = require('./config.json');
 const mtcUtil = require("./mtcUtil");
@@ -19,8 +19,8 @@ const BigNumber = require('bignumber.js');
 
 const requestModule = require('request');
 const request = requestModule.defaults({
-    timeout: 10000
-    //	proxy: 'http://192.168.10.2:8888'
+    timeout: 10000,
+//    proxy: 'http://192.168.10.2:8888'
 });
 
 const app = express();
@@ -62,6 +62,37 @@ function getTransactions(tx_id, db_id, db_sn, tx_idx) {
 
         let save_data = [];
         let save_addr = ""
+        console.log('Get Transaction ', db_id, db_sn, tx_id);
+        /* data struct
+            {
+             result: 'SUCCESS',
+             msg: '',
+             data: [
+               {
+                 timestamp: 1613543178,
+                 id: 'e1e38013e44358f6c4859748f7c05ac6a2406bd427e3d1df4349859c5077760f',
+                 parameters: [Array],
+                 token: '',
+                 type: 'mrc401create',
+                 values: [Object],	// HLF saved data
+                 validationCode: 0,
+                 address: 'MTW95PhgJazSd8DLjkrQc7L4KQCI9GrU94d292b5',
+                 datakey: 'MTW95PhgJazSd8DLjkrQc7L4KQCI9GrU94d292b5'
+               },
+               {
+                 timestamp: 1613543178,
+                 id: 'e1e38013e44358f6c4859748f7c05ac6a2406bd427e3d1df4349859c5077760f',
+                 parameters: [Array],
+                 token: '',
+                 type: 'mrc401',
+                 values: [Object],	// HLF DATA
+                 validationCode: 0,
+                 address: ''
+                 datakey: ''	// HLF DATA KEY
+               }
+             ]
+            }
+        */
 
         data.data.forEach(function (d) {
             d.db_id = db_id;
@@ -71,25 +102,32 @@ function getTransactions(tx_id, db_id, db_sn, tx_idx) {
                 console.log(d);
                 return;
             }
-            console.log(db_id, db_sn, tx_id, d.type);
             switch (d.type) {
                 case "Chaincode Install or Update":
                     break;
                 case "NewWallet":
                     var fix_key = d.parameters[1].replace(/(\r\n|\n|\r|-----BEGIN PUBLIC KEY-----|-----END PUBLIC KEY-----)/gm, "").trim();
                     db.get('ADDR_BY_PUBLICKEY:' + fix_key)
-                    .then(function (value) {
-                        var a = JSON.parse(value);
-                        a.push(d.parameters[0]);
-                        db.put('ADDR_BY_PUBLICKEY:' + fix_key,JSON.stringify(a));
-                    })
-                    .catch(function (err) {
-                        db.put('ADDR_BY_PUBLICKEY:' + fix_key, JSON.stringify([d.parameters[0]]));
-                    });
+                        .then(function (value) {
+                            var a = JSON.parse(value);
+                            a.push(d.parameters[0]);
+                            db.put('ADDR_BY_PUBLICKEY:' + fix_key, JSON.stringify(a));
+                        })
+                        .catch(function (err) {
+                            db.put('ADDR_BY_PUBLICKEY:' + fix_key, JSON.stringify([d.parameters[0]]));
+                        });
+
                 case "transfer":
                 case "multi_transfer":
                 case "stodexRegister":
                 case "mrc030create":
+                case "transfer_mrc401buy":  // MRC401 buyer update
+                case "transfer_mrc401bid":
+                case "transfer_mrc800take":
+                case "transfer_mrc800":
+                case "transfer_mrc402":
+                case "transfer_mrc402buy":
+                case "transfer_mrc402bid":
                     d.values.tx_id = tx_id;
                     d.values.db_sn = db_sn;
                     d.values.db_id = db_id;
@@ -109,10 +147,30 @@ function getTransactions(tx_id, db_id, db_sn, tx_idx) {
                         save_addr = d.parameters[0];
                     }
                     break;
+
+                // token change
                 case "receive":
                 case "token_reserve":
                 case "mrc030reward":
                 case "mrc030refund":
+
+                // token change by mrc401
+                case "receive_mrc401buy":  // MRC401 seller update
+                case "receive_mrc401sell":  // MRC401 seller update
+                case "receive_mrc401fee":   // MRC401 fee update
+                case "receive_mrc401refund":
+                case "receive_mrc401auction":
+                case "receive_mrc402":
+                case "receive_mrc402fee":
+                case "receive_mrc402sell":
+                case "receive_mrc402auction":
+                case "receive_mrc402refund":
+                case "receive_meltfee":
+                case "receive_melt":
+
+                // mrc800 change
+                case "receive_mrc800":
+                case "receive_mrc800give":
                     d.values.tx_id = tx_id;
                     d.values.db_sn = db_sn;
                     d.values.db_id = db_id;
@@ -170,11 +228,116 @@ function getTransactions(tx_id, db_id, db_sn, tx_idx) {
                         value: JSON.stringify(d.values)
                     });
                     break;
+                case "mrc400_create":
+                case "mrc400_update":
+                    console.log('MRC400 update ', d.parameters[0], d.values);
+                    save_data.push({
+                        type: 'put',
+                        key: "MRC400:DB:" + d.parameters[0],
+                        value: JSON.stringify(d.values)
+                    });
+
+                case "mrc401_create":
+                case "mrc401_update":
+                case "mrc401_transfer":
+
+                case "mrc401_sell":
+                case "mrc401_unsell":
+                case "mrc401_buy":
+
+                case "mrc401_auction":
+                case "mrc401_auctionbid":
+                case "mrc401_auctionbuynow":
+                case "mrc401_auctionwinning":
+                case "mrc401_auctionfailure":
+                case "mrc401_unauction":
+                case "mrc401_melt":
+                    console.log('MRC401 update ', d.parameters[0], d.values);
+                    save_data.push({
+                        type: 'put',
+                        key: "MRC401:DB:" + d.parameters[0],
+                        value: JSON.stringify(d.values)
+                    });
+                    break;
+
+                case "mrc402_create":
+                case "mrc402_update":
+                case "mrc402_melt":
+                case "mrc402_burn":
+                case "mrc402_mint":
+                    console.log('MRC402 update ', d.parameters[0], d.values);
+                    save_data.push({
+                        type: 'put',
+                        key: "MRC402:DB:" + d.parameters[0],
+                        value: JSON.stringify(d.values)
+                    });
+                    break;
+
+                case "mrc402_sell":
+                case "mrc402_unsell":
+                case "mrc402_buy":
+
+                case "mrc402_auction":
+                case "mrc402_auctionbuynow":
+                case "mrc402_auctionbid":
+                case "mrc402_unauction":
+                case "mrc402_auctionwinning":
+                case "mrc402_auctionfailure":
+                    console.log('MRC402DEX update ', d.parameters[0], d.values);
+                    save_data.push({
+                        type: 'put',
+                        key: "MRC402DEX:DB:" + d.parameters[0],
+                        value: JSON.stringify(d.values)
+                    });
+                    break;
+
+
+                case "mrc800_create":
+                case "mrc800_update":
+                    console.log('MRC800 update ', d.parameters[0], d.values);
+                    save_data.push({
+                        type: 'put',
+                        key: "MRC800:DB:" + d.parameters[0],
+                        value: JSON.stringify(d.values)
+                    });
+                    break;
+
+                // update owner nonce
+                case "mrc400create":
+                case "mrc400update":
+                case "mrc401create":
+                case "mrc401update":
+                case "mrc401transfer":
+                case "mrc401sell":
+                case "mrc401unsell":
+                case "mrc401auction":
+                case "mrc401unauction":
+
+                case "mrc402create":
+                case "mrc402update":
+                case "mrc402burn":
+                case "mrc402mint":
+                case "mrc402transfer":
+                case "mrc402melt":
+
+                case "mrc402sell":
+                case "mrc402unsell":
+                case "mrc402buy":
+                case "mrc402auction":
+                case "mrc402unauction":
+                case "mrc402auctionfailure":
+
+                case "mrc800create":
+                case "mrc800update":
+                    save_addr = d.parameters[1];
+                    break;
+
                 default:
-                    console.log(d.type, d);
+                    console.log('Default Error', d.type, d);
             }
 
             if (save_addr != "") {
+                console.log('Address update', save_addr, d.values);
                 save_data.push({
                     type: 'put',
                     key: "ADDRESS:CURRENT:" + save_addr,
@@ -186,7 +349,6 @@ function getTransactions(tx_id, db_id, db_sn, tx_idx) {
                     value: JSON.stringify(d.values)
                 });
             }
-
         });
         save_data.push({
             type: 'put',
@@ -286,8 +448,8 @@ function get_address(req, res) {
     db.createReadStream({
         gte: "ADDRESS:LOG:" + req.params.address + ":00000000000000000000000000000000",
         lte: "ADDRESS:LOG:" + req.params.address + ":99999999999999999999999999999999",
-	limit: 50,
-	reserve: true
+        limit: 50,
+        reserve: true
     })
         .on('data', function (data) {
             return_value.push(data.value);
@@ -318,6 +480,20 @@ function get_balance(req, res) {
                 });
             }
             res.send(a.balance);
+        })
+        .catch(function (err) {
+            res.status(404).send(err, res, 'Address ' + req.params.address + ' not found');
+        });
+}
+
+function get_balanceex(req, res) {
+    db.get('ADDRESS:CURRENT:' + req.params.address)
+        .then(function (value) {
+            var a = JSON.parse(value);
+            res.send({
+                mrc010: a.balance,
+                mrc402: a.mrc402
+            });
         })
         .catch(function (err) {
             res.status(404).send(err, res, 'Address ' + req.params.address + ' not found');
@@ -435,7 +611,7 @@ function get_totalsupply(req, res) {
                         }
                         data.circulation_supply = data.circulation_supply.minus(tx);
                     }
-		    res.send(""+data.circulation_supply/Math.pow(10, data.decimal));
+                    res.send("" + data.circulation_supply / Math.pow(10, data.decimal));
                 })
                 .catch(function (err) {
                     console.log(err);
@@ -447,37 +623,70 @@ function get_totalsupply(req, res) {
             res.status(404).send(err, res, 'Token ' + req.params.token_id + ' not found');
         });
 }
-function get_mrc020(req, res) {
-    var ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-    console.log(ip, req.url);
-    request.get({
-        url: config.MTCBridge + "/mrc020/" + req.params.mrc020key
-    }, function (error, response, body) {
-        if (error != null) {
-            res.status(412).send("MTC Server connection error");
-            return;
-        }
-        var data = JSON.parse(body);
-        if (data == null || data.result == undefined) {
-            res.status(412).send('MTC Main node response error');
-            return;
-        }
-        if (data.result != 'SUCCESS') {
-            res.status(412).send(data.msg);
-            return;
-        }
-        res.send(data.data);
-    });
+
+function default_txresponse_process(error, req, res, body, extra_key) {
+    if (error != null) {
+        res.status(412).send("MTC Server connection error");
+        return;
+    }
+
+    var data;
+    try {
+        data = JSON.parse(body);
+    } catch (err) {
+        res.status(400).send('MTC Main node response parsing error');
+        return;
+    }
+    if (data == null || data.result == undefined) {
+        res.status(400).send('MTC Main node response error');
+        return;
+    }
+    if (data.result != 'SUCCESS') {
+        res.status(412).send(data.msg);
+        return;
+    }
+
+    let rv = {
+        txid: data.data
+    };
+
+    if (extra_key && data.msg) {
+        rv[extra_key] = data.msg;
+    }
+    res.send(rv);
 }
 
+function default_response_process(error, req, res, body) {
+    if (error != null) {
+        res.status(412).send("MTC Server connection error");
+        return;
+    }
+
+    var data;
+    try {
+        data = JSON.parse(body);
+    } catch (err) {
+        res.status(400).send('MTC Main node response error');
+        return;
+    }
+    if (data == null || data.result == undefined) {
+        res.status(400).send('MTC Main node response error');
+        return;
+    }
+    if (data.result != 'SUCCESS') {
+        res.status(412).send(data.msg);
+        return;
+    }
+    res.send(data.data);
+}
 
 function post_mrc020(req, res) {
-    mtcUtil.ParameterCheck(req.body, 'owner');
-    mtcUtil.ParameterCheck(req.body, 'algorithm');
-    mtcUtil.ParameterCheck(req.body, 'data');
+    mtcUtil.ParameterCheck(req.body, 'owner', "address");
+    mtcUtil.ParameterCheck(req.body, 'algorithm', "", true,  0, 64);
+    mtcUtil.ParameterCheck(req.body, 'data', "", false, 1, 2048);
     mtcUtil.ParameterCheck(req.body, 'publickey');
     mtcUtil.ParameterCheck(req.body, 'opendate');
-    mtcUtil.ParameterCheck(req.body, 'referencekey');
+    mtcUtil.ParameterCheck(req.body, 'referencekey', "", true, 0, 64);
     mtcUtil.ParameterCheck(req.body, 'signature');
 
     if (req.body.data.length > 2048) {
@@ -520,35 +729,17 @@ function post_mrc020(req, res) {
     request.post({
         url: config.MTCBridge + "/mrc020",
         form: req.body
-    }, function (error, response, body) {
-        if (error != null) {
-            res.status(412).send("MTC Server connection error");
-            return;
-        }
+    }, function (err, response, body) { default_response_process(err, req, res, body) });
+}
 
-        var data;
-        try {
-            data = JSON.parse(body);
-        } catch (err) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data == null || data.result == undefined) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data.result != 'SUCCESS') {
-            res.status(412).send(data.msg);
-            return;
-        }
-        res.send(data.data);
-    });
+function get_mrc020(req, res) {
+    request.get({
+        url: config.MTCBridge + "/mrc020/" + req.params.mrc020key
+    }, function (err, response, body) { default_response_process(err, req, res, body) });
 }
 
 
 function get_mrc030(req, res) {
-    var ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-    console.log(ip, req.url);
     db.get('MRC030:DB:' + req.params.mrc030key)
         .then(function (value) {
             res.send(value);
@@ -560,8 +751,6 @@ function get_mrc030(req, res) {
 
 
 function get_mrc031(req, res) {
-    var ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-    console.log(ip, req.url);
     db.get('MRC031:DB:' + req.params.mrc031key)
         .then(function (value) {
             res.send(value);
@@ -573,42 +762,25 @@ function get_mrc031(req, res) {
 
 
 function post_mrc030(req, res) {
-    var ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-    console.log(ip, req.url);
     mtcUtil.ParameterCheck(req.body, 'owner', "address");
-    mtcUtil.ParameterCheck(req.body, 'title', "", 1, 256);
-    mtcUtil.ParameterCheck(req.body, 'description', "", 0, 2048);
+    mtcUtil.ParameterCheck(req.body, 'title', "", false, 1, 256);
+    mtcUtil.ParameterCheck(req.body, 'description', "", false, 0, 2048);
     mtcUtil.ParameterCheck(req.body, 'startdate', "int");
     mtcUtil.ParameterCheck(req.body, 'enddate', "int");
-    mtcUtil.ParameterCheck(req.body, 'reward', "int", 1, 50);
-    mtcUtil.ParameterCheck(req.body, 'rewardtoken', "int", 1, 50);
-    mtcUtil.ParameterCheck(req.body, 'maxrewardrecipient', "int", 1, 50);
+    mtcUtil.ParameterCheck(req.body, 'reward', "int", false, 1, 50);
+    mtcUtil.ParameterCheck(req.body, 'rewardtoken', "int", false, 1, 50);
+    mtcUtil.ParameterCheck(req.body, 'maxrewardrecipient', "int", false, 1, 50);
     mtcUtil.ParameterCheck(req.body, 'rewardtype');
     mtcUtil.ParameterCheck(req.body, 'url', "url");
     mtcUtil.ParameterCheck(req.body, 'query');
-    mtcUtil.ParameterCheck(req.body, 'sign_need', 'option');
+    mtcUtil.ParameterCheck(req.body, 'sign_need', "string", true);
     mtcUtil.ParameterCheck(req.body, 'signature');
     mtcUtil.ParameterCheck(req.body, 'tkey');
 
     request.post({
         url: config.MTCBridge + "/mrc030",
         form: req.body
-    }, function (error, response, body) {
-        if (error != null) {
-            res.status(412).send("MTC Server connection error");
-            return;
-        }
-        var data = JSON.parse(body);
-        if (data == null || data.result == undefined) {
-            res.status(412).send('MTC Main node response error');
-            return;
-        }
-        if (data.result != 'SUCCESS') {
-            res.status(412).send(data.msg);
-            return;
-        }
-        res.send(data.data);
-    });
+    }, function (err, response, body) { default_txresponse_process(err, req, res, body); });
 }
 
 function post_mrc030_join(req, res, next) {
@@ -616,51 +788,19 @@ function post_mrc030_join(req, res, next) {
     mtcUtil.ParameterCheck(req.body, "mrc030id");
     mtcUtil.ParameterCheck(req.body, 'voter', "address");
     mtcUtil.ParameterCheck(req.body, 'answer');
-    mtcUtil.ParameterCheck(req.body, 'voteCreatorSign', 'option');
+    mtcUtil.ParameterCheck(req.body, 'voteCreatorSign', 'string', true);
     mtcUtil.ParameterCheck(req.body, 'signature');
 
     request.post({
         url: config.MTCBridge + "/mrc030/join",
         form: req.body
-    }, function (error, response, body) {
-        if (error != null) {
-            res.status(412).send("MTC Server connection error");
-            return;
-        }
-        var data = JSON.parse(body);
-        if (data == null || data.result == undefined) {
-            res.status(412).send('MTC Main node response error');
-            return;
-        }
-        if (data.result != 'SUCCESS') {
-            res.status(412).send(data.msg);
-            return;
-        }
-        res.send(data.data);
-    });
+    }, function (err, response, body) { default_txresponse_process(err, req, res, body); });
 }
 
 function get_mrc030_finish(req, res) {
-    var ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-    console.log(ip, req.url);
     request.get({
         url: config.MTCBridge + "/mrc030/finish/" + req.params.mrc030key
-    }, function (error, response, body) {
-        if (error != null) {
-            res.status(412).send("MTC Server connection error");
-            return;
-        }
-        var data = JSON.parse(body);
-        if (data == null || data.result == undefined) {
-            res.status(412).send('MTC Main node response error');
-            return;
-        }
-        if (data.result != 'SUCCESS') {
-            res.status(412).send(data.msg);
-            return;
-        }
-        res.send(data.data);
-    });
+    }, function (err, response, body) { default_response_process(err, req, res, body) });
 }
 
 
@@ -672,7 +812,7 @@ function post_token(req, res) {
 
     var tier_sn = 1;
     if (req.body.tokenkey == undefined || req.body.tokenkey != 'INBLOCK_AUTH') {
-        //	req.body.type = '010';
+        req.body.type = '010';
     }
     if (typeof req.body.tier == typeof []) {
         req.body.tier.forEach(function (tier) {
@@ -697,29 +837,7 @@ function post_token(req, res) {
     request.post({
         url: config.MTCBridge + "/token",
         form: req.body
-    }, function (error, response, body) {
-        if (error != null) {
-            res.status(412).send("MTC Server connection error");
-            return;
-        }
-
-        var data;
-        try {
-            data = JSON.parse(body);
-        } catch (err) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data == null || data.result == undefined) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data.result != 'SUCCESS') {
-            res.status(412).send(data.msg);
-            return;
-        }
-        res.send(data.data);
-    });
+    }, function (err, response, body) { default_response_process(err, req, res, body) });
 }
 
 
@@ -728,30 +846,7 @@ function post_token_save(req, res) {
     request.post({
         url: config.MTCBridge + "/token/" + req.params.tkey,
         form: req.body
-    }, function (error, response, body) {
-        if (error != null) {
-            res.status(412).send("MTC Server connection error");
-            return;
-        }
-
-        var data;
-        try {
-            data = JSON.parse(body);
-        } catch (err) {
-            console.log(err);
-            res.status(400).send('MTC Main node response error 1');
-            return;
-        }
-        if (data == null || data.result == undefined) {
-            res.status(400).send('MTC Main node response error 2');
-            return;
-        }
-        if (data.result != 'SUCCESS') {
-            res.status(412).send(data.msg);
-            return;
-        }
-        res.send(data.data);
-    });
+    }, function (err, response, body) { default_response_process(err, req, res, body) });
 }
 
 
@@ -768,30 +863,12 @@ function get_transaction(req, res) {
 
 function post_transfer(req, res) {
 
-    if (req.body.from === undefined || req.body.from.length == 0) {
-        res.status(412).send("Parameter from is missing");
-        return;
-    }
-    if (req.body.to === undefined || req.body.to.length == 0) {
-        res.status(412).send("Parameter from is missing");
-        return;
-    }
-    if (req.body.token === undefined || req.body.token.length == 0) {
-        res.status(412).send("Parameter token is missing");
-        return;
-    }
-    if (req.body.amount === undefined || req.body.amount.length == 0) {
-        res.status(412).send("Parameter amount is missing");
-        return;
-    }
-    if (req.body.checkkey === undefined || req.body.checkkey.length == 0) {
-        res.status(412).send("Parameter checkkey is missing");
-        return;
-    }
-    if (req.body.signature === undefined || req.body.signature.length == 0) {
-        res.status(412).send("Parameter signature is missing");
-        return;
-    }
+    mtcUtil.ParameterCheck(req.body, 'from', "address");
+    mtcUtil.ParameterCheck(req.body, 'to', "address");
+    mtcUtil.ParameterCheck(req.body, 'token', "int");
+    mtcUtil.ParameterCheck(req.body, 'amount', "int");
+    mtcUtil.ParameterCheck(req.body, 'checkkey');
+    mtcUtil.ParameterCheck(req.body, 'signature');
 
     if (req.body.unlockdate === undefined) {
         req.body.unlockdate = 0;
@@ -801,60 +878,37 @@ function post_transfer(req, res) {
     request.post({
         url: config.MTCBridge + "/transfer",
         form: req.body
-    }, function (error, response, body) {
-        if (error != null) {
-            res.status(412).send("MTC Server connection error");
-            return;
-        }
-
-        try {
-            var data = JSON.parse(body);
-        } catch (err) {
-            console.log(err);
-            res.status(404).send(err.message);
-
-        }
-        if (data == null || data.result == undefined) {
-            res.status(404).send('MTC Main node response error');
-            return;
-        }
-        if (data.result != 'SUCCESS') {
-            res.status(404).send(data.msg);
-            return;
-        }
-
-        res.send(data.data);
-    });
+    }, function (err, response, body) { default_response_process(err, req, res, body) });
 }
 
 
 
 function post_multitransfer(req, res, next) {
     res.header('Cache-Control', 'no-cache');
-    var data = "";
-    // req.body.unlockdate = "0";
+
     mtcUtil.ParameterCheck(req.body, 'from', "address");
     mtcUtil.ParameterCheck(req.body, 'transferlist');
     mtcUtil.ParameterCheck(req.body, 'token', "int");
     mtcUtil.ParameterCheck(req.body, 'checkkey');
     mtcUtil.ParameterCheck(req.body, 'signature');
 
-    try{
+    var data = "";
+    try {
         data = JSON.parse(req.body.transferlist);
     } catch (e) {
         return next(new Error('The transferlist must be a json encoded array'));
     }
 
-    if (Array.isArray(data) == false){
+    if (Array.isArray(data) == false) {
         return next(new Error('The transferlist must be a json encoded array'));
     }
-    if (data.length > 100 ){
+    if (data.length > 100) {
         return next(new Error('There must be no more than 100 recipients of multitransfer'));
     }
 
-    for (var key in data){
+    for (var key in data) {
         mtcUtil.ParameterCheck(data[key], 'address', "address");
-        mtcUtil.ParameterCheck(data[key], 'amount', 'int', 1, 99);
+        mtcUtil.ParameterCheck(data[key], 'amount', 'int', false, 1, 99);
         mtcUtil.ParameterCheck(data[key], 'unlockdate', 'int');
 
         if (req.body.from == data[key].address) {
@@ -865,39 +919,13 @@ function post_multitransfer(req, res, next) {
     request.post({
         url: config.MTCBridge + "/multitransfer",
         form: req.body
-    }, function (error, response, body) {
-        if (error != null) {
-            res.status(412).send("MTC Server connection error");
-            return;
-        }
-
-        try {
-            var data = JSON.parse(body);
-        } catch (err) {
-            console.log(err);
-            res.status(404).send(err.message);
-
-        }
-        if (data == null || data.result == undefined) {
-            res.status(404).send('MTC Main node response error');
-            return;
-        }
-        if (data.result != 'SUCCESS') {
-            res.status(404).send(data.msg);
-            return;
-        }
-
-        res.send(data.data);
-    });
+    }, function (err, response, body) { default_response_process(err, req, res, body,) });
 }
 
 
 
 function get_key(req, res) {
-    if (req.params.address.length == 0) {
-        res.status(412).send("Parameter address is missing");
-        return;
-    }
+    mtcUtil.ParameterCheck(req.params, 'address', "address");
 
     let allowkey = {
         'transfer': 1,
@@ -914,23 +942,20 @@ function get_key(req, res) {
         return;
     }
 
-    request.get(config.MTCBridge + "/getkey/" + req.params.keytype + '/' + req.params.address, function (error, response, body) {
-        if (error != null) {
-            res.status(412).send("MTC Server connection error");
-            return;
-        }
-        var data = JSON.parse(body);
-        if (data == null || data.result == undefined) {
-            res.status(412).send('MTC Main node response error');
-            return;
-        }
-        if (data.result != 'SUCCESS') {
-            res.status(412).send(data.msg);
-            return;
-        }
-        res.send(data.data);
-    });
+    request.get(config.MTCBridge + "/getkey/" + req.params.keytype + '/' + req.params.address,
+        function (err, response, body) { default_response_process(err, req, res, body) });
 }
+
+
+
+function get_nonce(req, res) {
+    mtcUtil.ParameterCheck(req.params, 'address', "address");
+
+    request.get(config.MTCBridge + "/nonce/" + req.params.address,
+        function (err, response, body) { default_response_process(err, req, res, body) });
+}
+
+
 
 function post_tokenupdate_tokenbase(req, res) {
     mtcUtil.ParameterCheck(req.body, 'signature');
@@ -941,31 +966,7 @@ function post_tokenupdate_tokenbase(req, res) {
     request.post({
         url: config.MTCBridge + "/tokenUpdate/TokenBase/" + req.params.tkey + '/' + req.params.token + '/' + req.params.baseToken,
         form: req.body
-    }, function (error, response, body) {
-        if (error != null) {
-            res.status(412).send("MTC Server connection error");
-            return;
-        }
-
-        var data;
-        try {
-            data = JSON.parse(body);
-        } catch (err) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data == null || data.result == undefined) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data.result != 'SUCCESS') {
-            res.status(412).send({
-                error: data.msg
-            });
-            return;
-        }
-        res.send(data.data);
-    });
+    }, function (err, response, body) { default_response_process(err, req, res, body) });
 }
 
 function post_tokenupdate_tokentargetadd(req, res) {
@@ -977,29 +978,7 @@ function post_tokenupdate_tokentargetadd(req, res) {
     request.post({
         url: config.MTCBridge + "/tokenUpdate/TokenTargetAdd/" + req.params.tkey + '/' + req.params.token + '/' + req.params.targetToken,
         form: req.body
-    }, function (error, response, body) {
-        if (error != null) {
-            res.status(412).send("MTC Server connection error");
-            return;
-        }
-
-        var data;
-        try {
-            data = JSON.parse(body);
-        } catch (err) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data == null || data.result == undefined) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data.result != 'SUCCESS') {
-            res.status(412).send(data.msg);
-            return;
-        }
-        res.send(data.data);
-    });
+    }, function (err, response, body) { default_response_process(err, req, res, body) });
 }
 
 function post_tokenupdate_tokentargetremove(req, res) {
@@ -1012,159 +991,53 @@ function post_tokenupdate_tokentargetremove(req, res) {
     request.post({
         url: config.MTCBridge + "/tokenUpdate/TokenTargetRemove/" + req.params.tkey + '/' + req.params.token + '/' + req.params.targetToken,
         form: req.body
-    }, function (error, response, body) {
-        if (error != null) {
-            res.status(412).send("MTC Server connection error");
-            return;
-        }
-
-        var data;
-        try {
-            data = JSON.parse(body);
-        } catch (err) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data == null || data.result == undefined) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data.result != 'SUCCESS') {
-            res.status(412).send(data.msg);
-            return;
-        }
-        res.send(data.data);
-    });
+    }, function (err, response, body) { default_response_process(err, req, res, body) });
 }
 
 
 function post_mrc040_create(req, res) {
-    mtcUtil.ParameterCheck(req.body, 'owner');
+    mtcUtil.ParameterCheck(req.body, 'owner', "address");
     mtcUtil.ParameterCheck(req.body, 'side');
     mtcUtil.ParameterCheck(req.body, 'basetoken');
     mtcUtil.ParameterCheck(req.body, 'targettoken');
-    mtcUtil.ParameterCheck(req.body, 'price');
-    mtcUtil.ParameterCheck(req.body, 'qtt');
+    mtcUtil.ParameterCheck(req.body, 'price', 'int');
+    mtcUtil.ParameterCheck(req.body, 'qtt', 'int');
     mtcUtil.ParameterCheck(req.body, 'signature');
     request.post({
         url: config.MTCBridge + "/mrc040/create/" + req.params.tkey,
         form: req.body
-    }, function (error, response, body) {
-        if (error != null) {
-            res.status(412).send("MTC Server connection error");
-            return;
-        }
-
-        var data;
-        try {
-            data = JSON.parse(body);
-        } catch (err) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data == null || data.result == undefined) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data.result != 'SUCCESS') {
-            res.status(412).send(data.msg);
-            return;
-        }
-        res.send({
-            txid: data.data,
-            mrc040id: data.msg
-        });
-    });
+    }, function (err, response, body) { default_txresponse_process(err, req, res, body, "mrc040id"); });
 }
 
 
 function post_mrc040_cancel(req, res) {
-    mtcUtil.ParameterCheck(req.body, 'owner');
+    mtcUtil.ParameterCheck(req.body, 'owner', "address");
     mtcUtil.ParameterCheck(req.body, 'mrc040id');
     mtcUtil.ParameterCheck(req.body, 'signature');
 
     request.post({
         url: config.MTCBridge + "/mrc040/cancel/" + req.params.tkey,
         form: req.body
-    }, function (error, response, body) {
-        if (error != null) {
-            res.status(412).send("MTC Server connection error");
-            return;
-        }
-
-        var data;
-        try {
-            data = JSON.parse(body);
-        } catch (err) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data == null || data.result == undefined) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data.result != 'SUCCESS') {
-            res.status(412).send(data.msg);
-            return;
-        }
-        res.send(data.data);
-    });
+    }, function (err, response, body) { default_response_process(err, req, res, body) });
 }
 
 
 function post_mrc040_exchange(req, res) {
     mtcUtil.ParameterCheck(req.body, 'requester');
     mtcUtil.ParameterCheck(req.body, 'mrc040id');
-    mtcUtil.ParameterCheck(req.body, 'qtt');
+    mtcUtil.ParameterCheck(req.body, 'qtt', "int");
     mtcUtil.ParameterCheck(req.body, 'signature');
 
     request.post({
         url: config.MTCBridge + "/mrc040/exchange/" + req.params.tkey,
         form: req.body
-    }, function (error, response, body) {
-        if (error != null) {
-            res.status(412).send("MTC Server connection error");
-            return;
-        }
-
-        var data;
-        try {
-            data = JSON.parse(body);
-        } catch (err) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data == null || data.result == undefined) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data.result != 'SUCCESS') {
-            res.status(412).send(data.msg);
-            return;
-        }
-        res.send(data.data);
-    });
+    }, function (err, response, body) { default_response_process(err, req, res, body) });
 }
 
 function get_mrc040(req, res) {
     request.get({
         url: config.MTCBridge + "/mrc040/" + req.params.mrc040key
-    }, function (error, response, body) {
-        if (error != null) {
-            res.status(412).send("MTC Server connection error");
-            return;
-        }
-        var data = JSON.parse(body);
-        if (data == null || data.result == undefined) {
-            res.status(412).send('MTC Main node response error');
-            return;
-        }
-        if (data.result != 'SUCCESS') {
-            res.status(412).send(data.msg);
-            return;
-        }
-        res.send(data.data);
-    });
+    }, function (err, response, body) { default_response_process(err, req, res, body) });
 }
 
 
@@ -1193,29 +1066,7 @@ function post_exchange(req, res) {
     request.post({
         url: config.MTCBridge + "/exchange/" + req.params.fromTkey + "/" + req.params.toTkey,
         form: req.body
-    }, function (error, response, body) {
-        if (error != null) {
-            res.status(412).send("MTC Server connection error");
-            return;
-        }
-
-        var data;
-        try {
-            data = JSON.parse(body);
-        } catch (err) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data == null || data.result == undefined) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data.result != 'SUCCESS') {
-            res.status(412).send(data.msg);
-            return;
-        }
-        res.send(data.data);
-    });
+    }, function (err, response, body) { default_response_process(err, req, res, body) });
 }
 
 
@@ -1249,29 +1100,7 @@ function put_token(req, res) {
     request.put({
         url: config.MTCBridge + "/token/update/" + req.params.tkey,
         form: params
-    }, function (error, response, body) {
-        if (error != null) {
-            res.status(412).send("MTC Server connection error");
-            return;
-        }
-
-        var data;
-        try {
-            data = JSON.parse(body);
-        } catch (err) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data == null || data.result == undefined) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data.result != 'SUCCESS') {
-            res.status(412).send(data.msg);
-            return;
-        }
-        res.send(data.data);
-    });
+    }, function (err, response, body) { default_response_process(err, req, res, body) });
 }
 
 
@@ -1284,29 +1113,7 @@ function post_token_burn(req, res) {
     request.put({
         url: config.MTCBridge + "/token/burn/" + req.params.tkey,
         form: req.body
-    }, function (error, response, body) {
-        if (error != null) {
-            res.status(412).send("MTC Server connection error");
-            return;
-        }
-
-        var data;
-        try {
-            data = JSON.parse(body);
-        } catch (err) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data == null || data.result == undefined) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data.result != 'SUCCESS') {
-            res.status(412).send(data.msg);
-            return;
-        }
-        res.send(data.data);
-    });
+    }, function (err, response, body) { default_response_process(err, req, res, body) });
 }
 
 
@@ -1319,29 +1126,7 @@ function post_token_increase(req, res) {
     request.put({
         url: config.MTCBridge + "/token/increase/" + req.params.tkey,
         form: req.body
-    }, function (error, response, body) {
-        if (error != null) {
-            res.status(412).send("MTC Server connection error");
-            return;
-        }
-
-        var data;
-        try {
-            data = JSON.parse(body);
-        } catch (err) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data == null || data.result == undefined) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data.result != 'SUCCESS') {
-            res.status(412).send(data.msg);
-            return;
-        }
-        res.send(data.data);
-    });
+    }, function (err, response, body) { default_response_process(err, req, res, body) });
 }
 
 function post_mrc100_payment(req, res) {
@@ -1355,29 +1140,7 @@ function post_mrc100_payment(req, res) {
     request.post({
         url: config.MTCBridge + "/mrc100/payment",
         form: req.body
-    }, function (error, response, body) {
-        if (error != null) {
-            res.status(412).send("MTC Server connection error");
-            return;
-        }
-
-        var data;
-        try {
-            data = JSON.parse(body);
-        } catch (err) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data == null || data.result == undefined) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data.result != 'SUCCESS') {
-            res.status(412).send(data.msg);
-            return;
-        }
-        res.send(data.data);
-    });
+    }, function (err, response, body) { default_response_process(err, req, res, body) });
 }
 
 function post_mrc100_reward(req, res) {
@@ -1392,29 +1155,7 @@ function post_mrc100_reward(req, res) {
     request.post({
         url: config.MTCBridge + "/mrc100/reward",
         form: req.body
-    }, function (error, response, body) {
-        if (error != null) {
-            res.status(412).send("MTC Server connection error");
-            return;
-        }
-
-        var data;
-        try {
-            data = JSON.parse(body);
-        } catch (err) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data == null || data.result == undefined) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data.result != 'SUCCESS') {
-            res.status(412).send(data.msg);
-            return;
-        }
-        res.send(data.data);
-    });
+    }, function (err, response, body) { default_response_process(err, req, res, body) });
 }
 
 
@@ -1429,53 +1170,14 @@ function post_mrc100_log(req, res) {
     request.post({
         url: config.MTCBridge + "/mrc100/log/" + req.params.tkey,
         form: req.body
-    }, function (error, response, body) {
-        if (error != null) {
-            res.status(412).send("MTC Server connection error");
-            return;
-        }
-
-        var data;
-        try {
-            data = JSON.parse(body);
-        } catch (err) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data == null || data.result == undefined) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data.result != 'SUCCESS') {
-            res.status(412).send(data.msg);
-            return;
-        }
-        res.send(data.data);
-    });
+    }, function (err, response, body) { default_response_process(err, req, res, body) });
 }
 
 
 function get_mrc100_log(req, res) {
-    var ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-    console.log(ip, req.url);
     request.get({
         url: config.MTCBridge + "/mrc100/log/" + req.params.mrc100key
-    }, function (error, response, body) {
-        if (error != null) {
-            res.status(412).send("MTC Server connection error");
-            return;
-        }
-        var data = JSON.parse(body);
-        if (data == null || data.result == undefined) {
-            res.status(412).send('MTC Main node response error');
-            return;
-        }
-        if (data.result != 'SUCCESS') {
-            res.status(412).send(data.msg);
-            return;
-        }
-        res.send(data.data);
-    });
+    }, function (err, response, body) { default_response_process(err, req, res, body) });
 }
 
 
@@ -1485,29 +1187,7 @@ function get_mrc011(req, res) {
     request.put({
         url: config.MTCBridge + "/mrc011/" + req.params.mrc011key,
         form: req.body
-    }, function (error, response, body) {
-        if (error != null) {
-            res.status(412).send("MTC Server connection error");
-            return;
-        }
-
-        var data;
-        try {
-            data = JSON.parse(body);
-        } catch (err) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data == null || data.result == undefined) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data.result != 'SUCCESS') {
-            res.status(412).send(data.msg);
-            return;
-        }
-        res.send(data.data);
-    });
+    }, function (err, response, body) { default_response_process(err, req, res, body) });
 }
 
 
@@ -1520,29 +1200,7 @@ function post_mrc011(req, res) {
     request.post({
         url: config.MTCBridge + "/mrc011/" + req.params.tkey,
         form: req.body
-    }, function (error, response, body) {
-        if (error != null) {
-            res.status(412).send("MTC Server connection error");
-            return;
-        }
-
-        var data;
-        try {
-            data = JSON.parse(body);
-        } catch (err) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data == null || data.result == undefined) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data.result != 'SUCCESS') {
-            res.status(412).send(data.msg);
-            return;
-        }
-        res.send(data.data);
-    });
+    }, function (err, response, body) { default_response_process(err, req, res, body) });
 }
 
 
@@ -1555,29 +1213,7 @@ function put_mrc011(req, res) {
     request.post({
         url: config.MTCBridge + "/mrc011/" + req.params.tkey,
         form: req.body
-    }, function (error, response, body) {
-        if (error != null) {
-            res.status(412).send("MTC Server connection error");
-            return;
-        }
-
-        var data;
-        try {
-            data = JSON.parse(body);
-        } catch (err) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data == null || data.result == undefined) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data.result != 'SUCCESS') {
-            res.status(412).send(data.msg);
-            return;
-        }
-        res.send(data.data);
-    });
+    }, function (err, response, body) { default_response_process(err, req, res, body) });
 }
 
 
@@ -1590,29 +1226,7 @@ function get_mrc012(req, res) {
     request.post({
         url: config.MTCBridge + "/mrc011/" + req.params.tkey,
         form: req.body
-    }, function (error, response, body) {
-        if (error != null) {
-            res.status(412).send("MTC Server connection error");
-            return;
-        }
-
-        var data;
-        try {
-            data = JSON.parse(body);
-        } catch (err) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data == null || data.result == undefined) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data.result != 'SUCCESS') {
-            res.status(412).send(data.msg);
-            return;
-        }
-        res.send(data.data);
-    });
+    }, function (err, response, body) { default_response_process(err, req, res, body) });
 }
 
 
@@ -1623,29 +1237,7 @@ function get_mrc012_sign(req, res) {
     request.post({
         url: config.MTCBridge + "/mrc011/" + req.params.tkey,
         form: req.body
-    }, function (error, response, body) {
-        if (error != null) {
-            res.status(412).send("MTC Server connection error");
-            return;
-        }
-
-        var data;
-        try {
-            data = JSON.parse(body);
-        } catch (err) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data == null || data.result == undefined) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data.result != 'SUCCESS') {
-            res.status(412).send(data.msg);
-            return;
-        }
-        res.send(data.data);
-    });
+    }, function (err, response, body) { default_response_process(err, req, res, body) });
 }
 
 
@@ -1659,29 +1251,7 @@ function post_mrc012(req, res) {
     request.post({
         url: config.MTCBridge + "/mrc011/" + req.params.tkey,
         form: req.body
-    }, function (error, response, body) {
-        if (error != null) {
-            res.status(412).send("MTC Server connection error");
-            return;
-        }
-
-        var data;
-        try {
-            data = JSON.parse(body);
-        } catch (err) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data == null || data.result == undefined) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data.result != 'SUCCESS') {
-            res.status(412).send(data.msg);
-            return;
-        }
-        res.send(data.data);
-    });
+    }, function (err, response, body) { default_response_process(err, req, res, body) });
 }
 
 
@@ -1695,29 +1265,7 @@ function put_mrc012(req, res) {
     request.post({
         url: config.MTCBridge + "/mrc011/" + req.params.tkey,
         form: req.body
-    }, function (error, response, body) {
-        if (error != null) {
-            res.status(412).send("MTC Server connection error");
-            return;
-        }
-
-        var data;
-        try {
-            data = JSON.parse(body);
-        } catch (err) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data == null || data.result == undefined) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data.result != 'SUCCESS') {
-            res.status(412).send(data.msg);
-            return;
-        }
-        res.send(data.data);
-    });
+    }, function (err, response, body) { default_response_process(err, req, res, body) });
 }
 
 
@@ -1731,29 +1279,7 @@ function delete_mrc012(req, res) {
     request.post({
         url: config.MTCBridge + "/mrc011/" + req.params.tkey,
         form: req.body
-    }, function (error, response, body) {
-        if (error != null) {
-            res.status(412).send("MTC Server connection error");
-            return;
-        }
-
-        var data;
-        try {
-            data = JSON.parse(body);
-        } catch (err) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data == null || data.result == undefined) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data.result != 'SUCCESS') {
-            res.status(412).send(data.msg);
-            return;
-        }
-        res.send(data.data);
-    });
+    }, function (err, response, body) { default_response_process(err, req, res, body) });
 }
 
 function get_mrc100_logger(req, res) {
@@ -1762,29 +1288,7 @@ function get_mrc100_logger(req, res) {
     request.get({
         url: config.MTCBridge + "/mrc100/logger/" + req.params.token,
         form: req.body
-    }, function (error, response, body) {
-        if (error != null) {
-            res.status(412).send("MTC Server connection error");
-            return;
-        }
-
-        var data;
-        try {
-            data = JSON.parse(body);
-        } catch (err) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data == null || data.result == undefined) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data.result != 'SUCCESS') {
-            res.status(412).send(data.msg);
-            return;
-        }
-        res.send(data.data);
-    });
+    }, function (err, response, body) { default_response_process(err, req, res, body) });
 }
 
 function post_mrc100_logger(req, res) {
@@ -1796,29 +1300,7 @@ function post_mrc100_logger(req, res) {
     request.post({
         url: config.MTCBridge + "/mrc100/logger/" + req.params.tkey,
         form: req.body
-    }, function (error, response, body) {
-        if (error != null) {
-            res.status(412).send("MTC Server connection error");
-            return;
-        }
-
-        var data;
-        try {
-            data = JSON.parse(body);
-        } catch (err) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data == null || data.result == undefined) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data.result != 'SUCCESS') {
-            res.status(412).send(data.msg);
-            return;
-        }
-        res.send(data.data);
-    });
+    }, function (err, response, body) { default_response_process(err, req, res, body) });
 }
 
 function delete_mrc100_logger(req, res) {
@@ -1830,46 +1312,553 @@ function delete_mrc100_logger(req, res) {
     request.delete({
         url: config.MTCBridge + "/mrc100/logger/" + req.params.tkey,
         form: req.body
-    }, function (error, response, body) {
-        if (error != null) {
-            res.status(412).send("MTC Server connection error");
-            return;
-        }
-
-        var data;
-        try {
-            data = JSON.parse(body);
-        } catch (err) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data == null || data.result == undefined) {
-            res.status(400).send('MTC Main node response error');
-            return;
-        }
-        if (data.result != 'SUCCESS') {
-            res.status(412).send(data.msg);
-            return;
-        }
-        res.send(data.data);
-    });
+    }, function (err, response, body) { default_response_process(err, req, res, body) });
 }
-
 
 function post_address_by_key(req, res) {
     mtcUtil.ParameterCheck(req.body, 'publickey');
-	console.log("@" + req.body.publickey + "@");
-
-    var fix_key =  req.body.publickey.replace(/(\\n|\\r|\r|\n|-----BEGIN PUBLIC KEY-----|-----END PUBLIC KEY-----)/gm, "").trim();
-	console.log("["+fix_key+"]");
+    var fix_key = req.body.publickey.replace(/(\\n|\\r|\r|\n|-----BEGIN PUBLIC KEY-----|-----END PUBLIC KEY-----)/gm, "").trim();
     db.get('ADDR_BY_PUBLICKEY:' + fix_key)
-    .then(function (value) {
-        res.send(JSON.parse(value));
-    })
-    .catch(function (err) {
-        res.status(404).send('Address not found');
+        .then(function (value) {
+            res.send(JSON.parse(value));
+        })
+        .catch(function (err) {
+            res.status(404).send('Address not found');
+        });
+}
+
+
+
+/* ==================
+        MRC400
+   ================== */
+function get_mrc400(req, res) {
+    mtcUtil.ParameterCheck(req.params, 'mrc400id');
+
+    db.get('MRC400:DB:' + req.params.mrc400id)
+        .then(function (value) {
+            res.send(value);
+        })
+        .catch(function (err) {
+            res.status(404).send(err, res, 'MRC400 ' + req.params.mrc400id + ' not found');
+        });
+
+}
+
+function post_mrc400(req, res) {
+    mtcUtil.ParameterCheck(req.body, 'owner', "address");
+    mtcUtil.ParameterCheck(req.body, 'name', "string", false, 0, 128);
+    mtcUtil.ParameterCheck(req.body, 'url', "url", false, 1, 255);
+    mtcUtil.ParameterCheck(req.body, 'imageurl', "url", false, 1, 255);
+    mtcUtil.ParameterCheck(req.body, "allowtoken", "int", false, 1, 40);
+    mtcUtil.ParameterCheck(req.body, 'category', "string", false, 1, 64);
+    mtcUtil.ParameterCheck(req.body, 'description', "string", false, 1, 4096);
+    mtcUtil.ParameterCheck(req.body, 'itemurl', "url", false, 1, 255);
+    mtcUtil.ParameterCheck(req.body, 'itemimageurl', "url", false, 1, 255);
+    mtcUtil.ParameterCheck(req.body, 'data', "string", true, 1, 4096);
+    mtcUtil.ParameterCheck(req.body, 'signature');
+    mtcUtil.ParameterCheck(req.body, 'tkey');
+
+    request.post({
+        url: config.MTCBridge + "/mrc400",
+        form: req.body
+    }, function (err, response, body) { default_txresponse_process(err, req, res, body, "mrc400id"); });
+}
+
+
+function put_mrc400(req, res) {
+    mtcUtil.ParameterCheck(req.params, 'mrc400id');
+    mtcUtil.ParameterCheck(req.body, 'name', 'string', true, 0, 128);
+    mtcUtil.ParameterCheck(req.body, 'url', "url", 0, 255);
+    mtcUtil.ParameterCheck(req.body, 'imageurl', "url", 0, 255);
+    mtcUtil.ParameterCheck(req.body, "allowtoken", "int", 1, 40);
+    mtcUtil.ParameterCheck(req.body, 'category', 'string', true, 0, 64);
+    mtcUtil.ParameterCheck(req.body, 'description', 'string', true, 0, 4096);
+    mtcUtil.ParameterCheck(req.body, 'itemurl', "url", 0, 255);
+    mtcUtil.ParameterCheck(req.body, 'itemimageurl', "url", 0, 255);
+    mtcUtil.ParameterCheck(req.body, 'data', 'string', true, 0, 4096);
+    mtcUtil.ParameterCheck(req.body, 'signature');
+    mtcUtil.ParameterCheck(req.body, 'tkey');
+
+    request.put({
+        url: config.MTCBridge + "/mrc400/" + req.params.mrc400id,
+        form: req.body
+    }, function (err, response, body) {
+        default_txresponse_process(err, req, res, body);
+    });
+
+}
+
+
+function get_mrc401(req, res) {
+    mtcUtil.ParameterCheck(req.params, 'mrc401id');
+
+    db.get('MRC401:DB:' + req.params.mrc401id)
+        .then(function (value) {
+            res.send(value);
+        })
+        .catch(function (err) {
+            res.status(404).send(err, res, 'MRC401 ' + req.params.mrc031key + ' not found');
+        });
+
+}
+
+function post_mrc401(req, res) {
+    mtcUtil.ParameterCheck(req.params, 'mrc400id');
+    mtcUtil.ParameterCheck(req.body, 'itemdata');
+    mtcUtil.ParameterCheck(req.body, 'signature');
+    mtcUtil.ParameterCheck(req.body, 'tkey');
+
+
+    request.post({
+        url: config.MTCBridge + "/mrc401/" + req.params.mrc400id,
+        form: req.body
+    }, function (err, response, body) {
+        default_txresponse_process(err, req, res, body);
     });
 }
+
+
+function put_mrc401_update(req, res) {
+    mtcUtil.ParameterCheck(req.params, 'mrc400id');
+    mtcUtil.ParameterCheck(req.body, 'itemdata');
+    mtcUtil.ParameterCheck(req.body, 'signature');
+    mtcUtil.ParameterCheck(req.body, 'tkey');
+
+
+    request.put({
+        url: config.MTCBridge + "/mrc401/" + req.params.mrc400id,
+        form: req.body
+    }, function (err, response, body) {
+        default_txresponse_process(err, req, res, body);
+    });
+}
+
+function post_mrc401_transfer(req, res) {
+    mtcUtil.ParameterCheck(req.params, 'mrc401id');
+    mtcUtil.ParameterCheck(req.body, 'fromAddr', "address");
+    mtcUtil.ParameterCheck(req.body, 'toAddr', "address");
+    mtcUtil.ParameterCheck(req.body, 'signature');
+    mtcUtil.ParameterCheck(req.body, 'tkey');
+
+    request.post({
+        url: config.MTCBridge + "/mrc401/transfer/" + req.params.mrc401id,
+        form: req.body
+    }, function (err, response, body) {
+        default_txresponse_process(err, req, res, body);
+    });
+
+}
+
+
+function post_mrc401_sell(req, res) {
+    mtcUtil.ParameterCheck(req.body, 'seller', "address");
+    mtcUtil.ParameterCheck(req.body, 'mrc400id');
+    mtcUtil.ParameterCheck(req.body, 'itemdata');
+    mtcUtil.ParameterCheck(req.body, 'signature');
+    mtcUtil.ParameterCheck(req.body, 'tkey');
+    request.post({
+        url: config.MTCBridge + "/mrc401/sell",
+        form: req.body
+    }, function (err, response, body) {
+        default_txresponse_process(err, req, res, body);
+    });
+
+}
+
+
+function post_mrc401_unsell(req, res) {
+    mtcUtil.ParameterCheck(req.body, 'seller', "address");
+    mtcUtil.ParameterCheck(req.body, 'mrc400id');
+    mtcUtil.ParameterCheck(req.body, 'itemdata');
+    mtcUtil.ParameterCheck(req.body, 'signature');
+    mtcUtil.ParameterCheck(req.body, 'tkey');
+
+    request.post({
+        url: config.MTCBridge + "/mrc401/unsell",
+        form: req.body
+    }, function (err, response, body) {
+        default_txresponse_process(err, req, res, body);
+    });
+
+}
+
+function post_mrc401_buy(req, res) {
+    mtcUtil.ParameterCheck(req.params, 'mrc401id');
+    mtcUtil.ParameterCheck(req.body, 'buyer', "address");
+    mtcUtil.ParameterCheck(req.body, 'signature');
+    mtcUtil.ParameterCheck(req.body, 'tkey');
+
+    request.post({
+        url: config.MTCBridge + "/mrc401/buy/" + req.params.mrc401id,
+        form: req.body
+    }, function (err, response, body) {
+        default_txresponse_process(err, req, res, body);
+    });
+
+}
+
+function post_mrc401_auction(req, res) {
+    mtcUtil.ParameterCheck(req.body, 'seller', "address");
+    mtcUtil.ParameterCheck(req.body, 'mrc400id');
+    mtcUtil.ParameterCheck(req.body, 'itemdata');
+    mtcUtil.ParameterCheck(req.body, 'signature');
+    mtcUtil.ParameterCheck(req.body, 'tkey');
+    request.post({
+        url: config.MTCBridge + "/mrc401/auction",
+        form: req.body
+    }, function (err, response, body) {
+        default_txresponse_process(err, req, res, body);
+    });
+
+}
+
+function post_mrc401_unauction(req, res) {
+    mtcUtil.ParameterCheck(req.body, 'seller', "address");
+    mtcUtil.ParameterCheck(req.body, 'mrc400id');
+    mtcUtil.ParameterCheck(req.body, 'itemdata');
+    mtcUtil.ParameterCheck(req.body, 'signature');
+    mtcUtil.ParameterCheck(req.body, 'tkey');
+
+    request.post({
+        url: config.MTCBridge + "/mrc401/unauction",
+        form: req.body
+    }, function (err, response, body) { default_txresponse_process(err, req, res, body); });
+
+}
+
+function get_mrc401_auctionfinish(req, res) {
+    mtcUtil.ParameterCheck(req.params, 'mrc401id');
+
+    request.get({
+        url: config.MTCBridge + "/mrc401/auctionfinish/" + req.params.mrc401id
+    }, function (err, response, body) { default_txresponse_process(err, req, res, body); });
+
+}
+
+function post_mrc401_bid(req, res) {
+    mtcUtil.ParameterCheck(req.params, 'mrc401id');
+    mtcUtil.ParameterCheck(req.body, 'buyer', "address");
+    mtcUtil.ParameterCheck(req.body, 'amount', "int");
+    mtcUtil.ParameterCheck(req.body, 'token', "int");
+    mtcUtil.ParameterCheck(req.body, 'signature');
+    mtcUtil.ParameterCheck(req.body, 'tkey');
+
+    request.post({
+        url: config.MTCBridge + "/mrc401/bid/" + req.params.mrc401id,
+        form: req.body
+    }, function (err, response, body) { default_txresponse_process(err, req, res, body); });
+}
+
+function post_mrc401_melt(req, res) {
+    mtcUtil.ParameterCheck(req.params, 'mrc401id');
+    mtcUtil.ParameterCheck(req.body, 'signature');
+    mtcUtil.ParameterCheck(req.body, 'tkey');
+
+
+    request.post({
+        url: config.MTCBridge + "/mrc401/melt/" + req.params.mrc401id,
+        form: req.body
+    }, function (err, response, body) { default_txresponse_process(err, req, res, body); });
+}
+
+
+function get_mrc402(req, res) {
+    mtcUtil.ParameterCheck(req.params, 'mrc402id');
+    db.get('MRC402:DB:' + req.params.mrc402id)
+        .then(function (value) {
+            res.send(value);
+        })
+        .catch(function (err) {
+            res.status(404).send(err, res, 'MRC402 ' + req.params.mrc400id + ' not found');
+        });
+}
+
+function post_mrc402(req, res) {
+    mtcUtil.ParameterCheck(req.body, 'name', "string", false, 1, 128);
+    mtcUtil.ParameterCheck(req.body, 'creator', "address");
+    mtcUtil.ParameterCheck(req.body, 'creatorcommission');
+    mtcUtil.ParameterCheck(req.body, 'totalsupply', "int", false, 1, 8);
+    mtcUtil.ParameterCheck(req.body, 'decimal', "int", false, 1, 1);
+    mtcUtil.ParameterCheck(req.body, 'url', "url", false, 1, 255);
+    mtcUtil.ParameterCheck(req.body, 'imageurl', "url", false, 1, 255);
+    mtcUtil.ParameterCheck(req.body, "shareholder", "string", true, 1, 1024);
+    mtcUtil.ParameterCheck(req.body, "initialreserve", "string", true, 1, 1024);
+    mtcUtil.ParameterCheck(req.body, "expiredate", "int", true, 0, 12);
+    mtcUtil.ParameterCheck(req.body, 'data', "string", true, 0, 40960);
+    mtcUtil.ParameterCheck(req.body, 'information', "string", true, 0, 40960);
+    mtcUtil.ParameterCheck(req.body, 'socialmedia', "string", true, 0, 40960);
+    mtcUtil.ParameterCheck(req.body, 'copyright_registration_country', "string", true, 0, 2);
+    mtcUtil.ParameterCheck(req.body, 'copyright_registrar', "string", true, 0, 128);
+    mtcUtil.ParameterCheck(req.body, 'copyright_registration_number', "string", true, 0, 64);
+    mtcUtil.ParameterCheck(req.body, 'signature');
+    mtcUtil.ParameterCheck(req.body, 'tkey');
+
+    request.post({
+        url: config.MTCBridge + "/mrc402",
+        form: req.body
+    }, function (err, response, body) { default_txresponse_process(err, req, res, body, "mrc402id"); });
+}
+
+
+function post_mrc402_transfer(req, res) {
+    mtcUtil.ParameterCheck(req.body, 'fromAddr', "address");
+    mtcUtil.ParameterCheck(req.body, 'toAddr', "address");
+    mtcUtil.ParameterCheck(req.body, 'amount');
+    mtcUtil.ParameterCheck(req.body, 'tag');
+    mtcUtil.ParameterCheck(req.body, 'memo');
+    mtcUtil.ParameterCheck(req.body, 'signature');
+    mtcUtil.ParameterCheck(req.body, 'tkey');
+
+    request.post({
+        url: config.MTCBridge + "/mrc402/transfer/" + req.params.mrc402id,
+        form: req.body
+    }, function (err, response, body) { default_txresponse_process(err, req, res, body); });
+}
+
+
+function put_mrc402(req, res) {
+    mtcUtil.ParameterCheck(req.body, 'url', "url", false, 1, 255);
+    mtcUtil.ParameterCheck(req.body, 'data', "string", true, 0, 40960);
+    mtcUtil.ParameterCheck(req.body, 'information', "string", true, 0, 40960);
+    mtcUtil.ParameterCheck(req.body, 'socialmedia', "string", true, 0, 40960);
+    mtcUtil.ParameterCheck(req.body, 'copyright_registration_country', "string", true, 0, 2);
+    mtcUtil.ParameterCheck(req.body, 'copyright_registrar', "string", true, 0, 128);
+    mtcUtil.ParameterCheck(req.body, 'copyright_registration_number', "string", true, 0, 64);
+    mtcUtil.ParameterCheck(req.body, 'signature');
+    mtcUtil.ParameterCheck(req.body, 'tkey');
+
+    request.put({
+        url: config.MTCBridge + "/mrc402/update/" + req.params.mrc402id,
+        form: req.body
+    }, function (err, response, body) { default_txresponse_process(err, req, res, body); });
+}
+
+function put_mrc402_mint(req, res) {
+    mtcUtil.ParameterCheck(req.body, 'amount');
+    mtcUtil.ParameterCheck(req.body, 'signature');
+    mtcUtil.ParameterCheck(req.body, 'memo', "string", true, 0, 1024);
+    mtcUtil.ParameterCheck(req.body, 'tkey');
+
+    request.put({
+        url: config.MTCBridge + "/mrc402/mint/" + req.params.mrc402id,
+        form: req.body
+    }, function (err, response, body) { default_txresponse_process(err, req, res, body); });
+}
+
+
+function put_mrc402_burn(req, res) {
+    mtcUtil.ParameterCheck(req.body, 'amount');
+    mtcUtil.ParameterCheck(req.body, 'signature');
+    mtcUtil.ParameterCheck(req.body, 'memo', "string", true, 0, 1024);
+    mtcUtil.ParameterCheck(req.body, 'tkey');
+
+    request.put({
+        url: config.MTCBridge + "/mrc402/burn/" + req.params.mrc402id,
+        form: req.body
+    }, function (err, response, body) { default_txresponse_process(err, req, res, body); });
+}
+
+function post_mrc402_melt(req, res) {
+    mtcUtil.ParameterCheck(req.body, 'address', 'address');
+    mtcUtil.ParameterCheck(req.body, 'amount');
+    mtcUtil.ParameterCheck(req.body, 'signature');
+    mtcUtil.ParameterCheck(req.body, 'tkey');
+
+    request.post({
+        url: config.MTCBridge + "/mrc402/melt/" + req.params.mrc402id,
+        form: req.body
+    }, function (err, response, body) { default_txresponse_process(err, req, res, body); });
+}
+
+function get_mrc402_dex(req, res) {
+    mtcUtil.ParameterCheck(req.params, 'mrc402dexid');
+    db.get('MRC402DEX:DB:' + req.params.mrc402dexid)
+        .then(function (value) {
+            res.send(value);
+        })
+        .catch(function (err) {
+            res.status(404).send(err, res, 'MRC402DEX ' + req.params.mrc402dexid + ' not found');
+        });
+}
+
+function post_mrc402_sell(req, res) {
+    mtcUtil.ParameterCheck(req.body, 'address', 'address');
+    mtcUtil.ParameterCheck(req.body, 'amount', "int");
+    mtcUtil.ParameterCheck(req.body, 'token', "int");
+    mtcUtil.ParameterCheck(req.body, 'price', "int");
+    mtcUtil.ParameterCheck(req.body, 'platform_name', "string", true, 0, 255);
+    mtcUtil.ParameterCheck(req.body, 'platform_url', "url", true, 0, 255);
+    mtcUtil.ParameterCheck(req.body, 'platform_address', "address", true);
+    mtcUtil.ParameterCheck(req.body, 'platform_commission', "string", true, 0, 5);
+
+    mtcUtil.ParameterCheck(req.body, 'signature');
+    mtcUtil.ParameterCheck(req.body, 'tkey');
+
+    request.post({
+        url: config.MTCBridge + "/mrc402/sell/" + req.params.mrc402id,
+        form: req.body
+    }, function (err, response, body) { default_txresponse_process(err, req, res, body, "mrc402dexid"); });
+}
+
+function post_mrc402_unsell(req, res) {
+    mtcUtil.ParameterCheck(req.body, 'signature');
+    mtcUtil.ParameterCheck(req.body, 'tkey');
+
+    request.post({
+        url: config.MTCBridge + "/mrc402/unsell/" + req.params.mrc402dexid,
+        form: req.body
+    }, function (err, response, body) { default_txresponse_process(err, req, res, body); });
+}
+
+function post_mrc402_buy(req, res) {
+    mtcUtil.ParameterCheck(req.body, 'address', 'address');
+    mtcUtil.ParameterCheck(req.body, 'signature');
+    mtcUtil.ParameterCheck(req.body, 'amount', "int");
+    mtcUtil.ParameterCheck(req.body, 'tkey');
+
+    request.post({
+        url: config.MTCBridge + "/mrc402/buy/" + req.params.mrc402dexid,
+        form: req.body
+    }, function (err, response, body) { default_txresponse_process(err, req, res, body); });
+}
+function post_mrc402_auction(req, res) {
+    mtcUtil.ParameterCheck(req.body, 'address', 'address');
+    mtcUtil.ParameterCheck(req.body, 'amount', "int");
+    mtcUtil.ParameterCheck(req.body, 'auction_start_price', "int");
+    mtcUtil.ParameterCheck(req.body, 'token', "int");
+    mtcUtil.ParameterCheck(req.body, 'auction_bidding_unit', "int");
+    mtcUtil.ParameterCheck(req.body, 'auction_buynow_price', "string", true);
+    mtcUtil.ParameterCheck(req.body, 'auction_start_date', "int", true);
+    mtcUtil.ParameterCheck(req.body, 'auction_end_date', "int", true);
+    mtcUtil.ParameterCheck(req.body, 'platform_name', "string", true, 0, 255);
+    mtcUtil.ParameterCheck(req.body, 'platform_url', "url", true, 0, 255);
+    mtcUtil.ParameterCheck(req.body, 'platform_address', "address", true);
+    mtcUtil.ParameterCheck(req.body, 'platform_commission', "string", true, 0, 5);
+
+    mtcUtil.ParameterCheck(req.body, 'signature');
+    mtcUtil.ParameterCheck(req.body, 'tkey');
+
+    request.post({
+        url: config.MTCBridge + "/mrc402/auction/" + req.params.mrc402id,
+        form: req.body
+    }, function (err, response, body) { default_txresponse_process(err, req, res, body, "mrc402dexid"); });
+}
+
+function post_mrc402_unauction(req, res) {
+    mtcUtil.ParameterCheck(req.body, 'signature');
+    mtcUtil.ParameterCheck(req.body, 'tkey');
+
+    request.post({
+        url: config.MTCBridge + "/mrc402/unauction/" + req.params.mrc402dexid,
+        form: req.body
+    }, function (err, response, body) { default_txresponse_process(err, req, res, body); });
+}
+
+function post_mrc402_bid(req, res) {
+    mtcUtil.ParameterCheck(req.body, 'address', 'address');
+    mtcUtil.ParameterCheck(req.body, 'amount');
+    mtcUtil.ParameterCheck(req.body, 'signature');
+    mtcUtil.ParameterCheck(req.body, 'tkey');
+
+    request.post({
+        url: config.MTCBridge + "/mrc402/bid/" + req.params.mrc402dexid,
+        form: req.body
+    }, function (err, response, body) { default_txresponse_process(err, req, res, body); });
+}
+
+function get_mrc402_auctionfinish(req, res) {
+    request.get({
+        url: config.MTCBridge + "/mrc402/auctionfinish/" + req.params.mrc402dexid
+    }, function (err, response, body) { default_txresponse_process(err, req, res, body); });
+}
+
+function get_mrc800(req, res) {
+    mtcUtil.ParameterCheck(req.params, 'mrc800id');
+
+    db.get('MRC800:DB:' + req.params.mrc800id)
+        .then(function (value) {
+            res.send(value);
+        })
+        .catch(function (err) {
+            res.status(404).send(err, res, 'MRC800 ' + req.params.mrc800id + ' not found');
+        });
+}
+
+function post_mrc800(req, res) {
+    mtcUtil.ParameterCheck(req.body, 'owner', "address");
+    mtcUtil.ParameterCheck(req.body, 'name', "", false, 0, 128);
+    mtcUtil.ParameterCheck(req.body, 'url', "url", false, 1, 255);
+    mtcUtil.ParameterCheck(req.body, 'imageurl', "url", false, 1, 255);
+    mtcUtil.ParameterCheck(req.body, 'description', "string", true, 1, 4096);
+    mtcUtil.ParameterCheck(req.body, 'signature');
+    mtcUtil.ParameterCheck(req.body, 'tkey');
+
+    request.post({
+        url: config.MTCBridge + "/mrc800",
+        form: req.body
+    }, function (err, response, body) { default_txresponse_process(err, req, res, body, "mrc800id"); });
+}
+
+
+function put_mrc800(req, res) {
+    mtcUtil.ParameterCheck(req.params, 'mrc800id');
+    mtcUtil.ParameterCheck(req.body, 'name', "string", true, 0, 128);
+    mtcUtil.ParameterCheck(req.body, 'url', "url", true, 0, 255);
+    mtcUtil.ParameterCheck(req.body, 'imageurl', "url", true, 0, 255);
+    mtcUtil.ParameterCheck(req.body, 'description', "string", true, 0, 4096);
+    mtcUtil.ParameterCheck(req.body, 'signature');
+    mtcUtil.ParameterCheck(req.body, 'tkey');
+
+    request.put({
+        url: config.MTCBridge + "/mrc800/" + req.params.mrc400id,
+        form: req.body
+    }, function (err, response, body) { default_txresponse_process(err, req, res, body); });
+
+}
+
+function post_mrc800_take(req, res) {
+    mtcUtil.ParameterCheck(req.body, 'mrc800id', "", false, 40, 40);
+    mtcUtil.ParameterCheck(req.body, 'from', "address");
+    mtcUtil.ParameterCheck(req.body, 'amont', "int");
+    mtcUtil.ParameterCheck(req.body, 'signature');
+    mtcUtil.ParameterCheck(req.body, 'tkey');
+
+    request.post({
+        url: config.MTCBridge + "/mrc800/take/" + req.params.mrc800id,
+        form: req.body
+    }, function (err, response, body) { default_txresponse_process(err, req, res, body); });
+}
+
+
+function post_mrc800_give(req, res) {
+    mtcUtil.ParameterCheck(req.body, 'mrc800id', "", false, 40, 40);
+    mtcUtil.ParameterCheck(req.body, 'to', "address");
+    mtcUtil.ParameterCheck(req.body, 'amont', "int");
+    mtcUtil.ParameterCheck(req.body, 'signature');
+    mtcUtil.ParameterCheck(req.body, 'tkey');
+
+    request.post({
+        url: config.MTCBridge + "/mrc800/give/" + req.params.mrc800id,
+        form: req.body
+    }, function (err, response, body) { default_txresponse_process(err, req, res, body); });
+}
+
+function post_mrc800_transfer(req, res) {
+    mtcUtil.ParameterCheck(req.body, 'from', "address");
+    mtcUtil.ParameterCheck(req.body, 'to', "address");
+    mtcUtil.ParameterCheck(req.body, 'mrc800id', "", false, 40, 40);
+    mtcUtil.ParameterCheck(req.body, 'amont', "int");
+    mtcUtil.ParameterCheck(req.body, 'signature');
+    mtcUtil.ParameterCheck(req.body, 'tkey');
+
+    request.post({
+        url: config.MTCBridge + "/mrc800/transfer/" + req.params.mrc800id,
+        form: req.body
+    }, function (err, response, body) { default_txresponse_process(err, req, res, body); });
+}
+
+
 
 
 // not chain code.
@@ -1879,7 +1868,9 @@ app.get('/transaction/:transaction_id', get_transaction);
 
 // bridge but not chain code.
 app.get('/getkey/:keytype/:address', get_key);
+app.get('/nonce/:address', get_nonce);
 app.get('/balance/:address', get_balance);
+app.get('/balanceex/:address', get_balanceex);
 
 // wallet
 app.get('/address/:address', get_address);
@@ -1941,6 +1932,56 @@ app.delete('/mrc100/logger/:tkey', delete_mrc100_logger);
 app.post('/tokenUpdate/TokenBase/:tkey/:token/:baseToken', upload.array(), post_tokenupdate_tokenbase);
 app.post('/tokenUpdate/TokenTargetAdd/:tkey/:token/:targetToken', upload.array(), post_tokenupdate_tokentargetadd);
 app.post('/tokenUpdate/TokenTargetRemove/:tkey/:token/:targetToken', upload.array(), post_tokenupdate_tokentargetremove);
+
+
+// mrc400 - NFT project
+app.get('/mrc400/:mrc400id', get_mrc400);
+app.post('/mrc400', upload.array(), post_mrc400);
+app.put('/mrc400/:mrc400id', upload.array(), put_mrc400);
+
+// mrc401 - NFT
+app.get('/mrc401/:mrc401id', get_mrc401);
+app.post('/mrc401/transfer/:mrc401id', upload.array(), post_mrc401_transfer);
+app.post('/mrc401/sell', upload.array(), post_mrc401_sell);
+app.post('/mrc401/unsell', upload.array(), post_mrc401_unsell);
+app.post('/mrc401/buy/:mrc401id', upload.array(), post_mrc401_buy);
+app.post('/mrc401/melt/:mrc401id', upload.array(), post_mrc401_melt);
+app.post('/mrc401/bid/:mrc401id', upload.array(), post_mrc401_bid);
+app.post('/mrc401/auction', upload.array(), post_mrc401_auction);
+app.post('/mrc401/unauction', upload.array(), post_mrc401_unauction);
+app.get('/mrc401/auctionfinish/:mrc401id', upload.array(), get_mrc401_auctionfinish);
+app.put('/mrc401/:mrc400id', upload.array(), put_mrc401_update);
+app.post('/mrc401/:mrc400id', upload.array(), post_mrc401);
+
+
+// mrc402 - A token called NFT
+app.get('/mrc402/:mrc402id', upload.array(), get_mrc402);
+app.post('/mrc402', upload.array(), post_mrc402);
+app.post('/mrc402/transfer/:mrc402id', upload.array(), post_mrc402_transfer);
+app.put('/mrc402/update/:mrc402id', upload.array(), put_mrc402);
+app.put('/mrc402/mint/:mrc402id', upload.array(), put_mrc402_mint);
+app.put('/mrc402/burn/:mrc402id', upload.array(), put_mrc402_burn);
+app.post('/mrc402/melt/:mrc402id', upload.array(), post_mrc402_melt);
+
+app.get('/mrc402/dex/:mrc402dexid', upload.array(), get_mrc402_dex);
+app.post('/mrc402/sell/:mrc402id', upload.array(), post_mrc402_sell);
+app.post('/mrc402/unsell/:mrc402dexid', upload.array(), post_mrc402_unsell);
+app.post('/mrc402/buy/:mrc402dexid', upload.array(), post_mrc402_buy);
+app.post('/mrc402/bid/:mrc402dexid', upload.array(), post_mrc402_bid);
+app.post('/mrc402/auction/:mrc402id', upload.array(), post_mrc402_auction);
+app.post('/mrc402/unauction/:mrc402dexid', upload.array(), post_mrc402_unauction);
+app.get('/mrc402/auctionfinish/:mrc402dexid', upload.array(), get_mrc402_auctionfinish);
+
+// mrc800 - point
+app.get('/mrc800/:mrc800id', get_mrc800);
+app.post('/mrc800', upload.array(), post_mrc800);
+app.put('/mrc800/:mrc800id', upload.array(), put_mrc800);
+
+app.post('/mrc800/transfer', upload.array(), post_mrc800_transfer);
+app.post('/mrc800/take', upload.array(), post_mrc800_take);
+app.post('/mrc800/give', upload.array(), post_mrc800_give);
+
+
 
 app.use(function (error, req, res, next) {
     console.log(error);
