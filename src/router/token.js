@@ -184,6 +184,7 @@ function post_token_burn(req, res) {
     ParameterCheck(req.body, 'token');
     ParameterCheck(req.body, 'signature');
     ParameterCheck(req.body, 'amount');
+    ParameterCheck(req.body, 'memo', true);
     ParameterCheck(req.params, 'tkey');
 
     request.put(config.MTCBridge + "/token/burn/" + req.params.tkey,
@@ -196,6 +197,7 @@ function post_token_increase(req, res) {
     ParameterCheck(req.body, 'token');
     ParameterCheck(req.body, 'signature');
     ParameterCheck(req.body, 'amount');
+    ParameterCheck(req.body, 'memo', true);
     ParameterCheck(req.params, 'tkey');
 
     request.put(config.MTCBridge + "/token/increase/" + req.params.tkey,
@@ -291,6 +293,45 @@ function post_exchange(req, res) {
         function (err, response) { default_response_process(err, req, res, response) });
 }
 
+
+function post_token_sell(req, res) {
+    ParameterCheck(req.body, 'address', 'address');
+    ParameterCheck(req.body, 'amount', "int");
+    ParameterCheck(req.body, 'token', "int");
+    ParameterCheck(req.body, 'price', "int");
+    ParameterCheck(req.body, 'platform_name', "string", true, 0, 255);
+    ParameterCheck(req.body, 'platform_url', "url", true, 0, 255);
+    ParameterCheck(req.body, 'platform_address', "address", true);
+    ParameterCheck(req.body, 'platform_commission', "string", true, 0, 5);
+
+    ParameterCheck(req.body, 'signature');
+    ParameterCheck(req.body, 'tkey');
+
+    request.post(config.MTCBridge + "/token/sell/" + req.params.mrc010id,
+        req.body,
+        function (err, response) { default_txresponse_process(err, req, res, response, "mrc010dexid"); });
+}
+
+function post_token_unsell(req, res) {
+    ParameterCheck(req.body, 'signature');
+    ParameterCheck(req.body, 'tkey');
+
+    request.post(config.MTCBridge + "/token/unsell/" + req.params.mrc010dexid,
+        req.body,
+        function (err, response) { default_txresponse_process(err, req, res, response); });
+}
+
+function post_token_buy(req, res) {
+    ParameterCheck(req.body, 'address', 'address');
+    ParameterCheck(req.body, 'signature');
+    ParameterCheck(req.body, 'amount', "int");
+    ParameterCheck(req.body, 'tkey');
+
+    request.post(config.MTCBridge + "/token/buy/" + req.params.mrc010dexid,
+        req.body,
+        function (err, response) { default_txresponse_process(err, req, res, response); });
+}
+
 // token
 router.get('/token/:token_id', get_token);
 router.get('/totalsupply/:token_id', get_totalsupply);
@@ -299,6 +340,11 @@ router.put('/token/update/:tkey', put_token);
 router.post('/token/:tkey', post_token_save);
 router.put('/token/burn/:tkey', post_token_burn);
 router.put('/token/increase/:tkey', post_token_increase);
+
+// dex
+router.post('/token/sell/:mrc010id', post_token_sell);
+router.post('/token/unsell/:mrc010dexid', post_token_unsell);
+router.post('/token/buy/:mrc010dexid', post_token_buy);
 
 
 // transfer and exchange
