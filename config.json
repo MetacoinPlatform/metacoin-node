@@ -1,5 +1,6 @@
 {
   "MTCBridge" : "http://127.0.0.1:20920",
   "DB_PATH" : "./db",
+  "IS_TESTNET": true,
   "port": 20922
 }
