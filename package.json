@@ -1,57 +1,57 @@
 {
-	"name": "metacoin-node",
-	"version": "2.2.0",
-	"main": "mtcnode.js",
-	"description": "MetaCoin Node",
-	"license": "MIT",
-	"repository": {
-		"type": "git",
-		"url": "http://metacoin.network"
-	},
-	"author": "Inblock",
-	"keywords": [
-		"MetaCoin",
-		"MTC"
-	],
-	"dependencies": {
-		"bignumber.js": "^9.1.0",
-		"crc": "^4.1.1",
-		"express": "^4.18.1",
-		"level-rocksdb": "^5.0.0",
-		"superagent": "^8.0.0",
-		"winston": "^3.8.1",
-		"yarn": "^1.22.19"
-	},
-	"scripts": {
-		"start": "nodemon mtcnode.js"
-	},
-	"engines": {
-		"node": "^12",
-		"yarn": "^1.16.0"
-	},
-	"eslintConfig": {
-		"root": true,
-		"env": {
-			"node": true
-		},
-		"extends": [
-			"eslint:recommended"
-		],
-		"parserOptions": {
-			"ecmaVersion": 2015,
-			"parser": "babel-eslint",
-			"sourceType": "module"
-		},
-		"rules": {
-			"no-unused-vars": [
-				"warn",
-				{
-					"vars": "all"
-				}
-			]
-		}
-	},
-	"devDependencies": {
-		"nodemon": "^2.0.19"
-	}
+        "name": "metacoin-node",
+        "version": "2.2.0",
+        "main": "mtcnode.js",
+        "description": "MetaCoin Node",
+        "license": "MIT",
+        "repository": {
+                "type": "git",
+                "url": "http://metacoin.network"
+        },
+        "author": "Inblock",
+        "keywords": [
+                "MetaCoin",
+                "MTC"
+        ],
+        "dependencies": {
+                "bignumber.js": "^9.1.0",
+                "crc": "^4.1.1",
+                "express": "^4.18.1",
+                "level-rocksdb": "^5.0.0",
+                "superagent": "^8.0.0",
+                "winston": "^3.8.1",
+                "yarn": "^1.22.19"
+        },
+        "scripts": {
+                "start": "nodemon mtcnode.js"
+        },
+        "engines": {
+                "node": "^12",
+                "yarn": "^1.16.0"
+        },
+        "eslintConfig": {
+                "root": true,
+                "env": {
+                        "node": true
+                },
+                "extends": [
+                        "eslint:recommended"
+                ],
+                "parserOptions": {
+                        "ecmaVersion": 2015,
+                        "parser": "babel-eslint",
+                        "sourceType": "module"
+                },
+                "rules": {
+                        "no-unused-vars": [
+                                "warn",
+                                {
+                                        "vars": "all"
+                                }
+                        ]
+                }
+        },
+        "devDependencies": {
+                "nodemon": "^2.0.19"
+        }
 }
