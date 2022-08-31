@@ -1,26 +1,57 @@
 {
-  "name": "metacoin-node",
-  "version": "2.1.0",
-  "main": "mtcnode.js",
-  "description": "MetaCoin Node",
-  "dependencies": {
-    "bignumber.js": "^9.0.0",
-    "body-parser": "1.18.3",
-    "crc": "3.8.0",
-    "ec-key": "0.0.2",
-    "express": "4.16.3",
-    "level-rocksdb": "^4.0.0",
-    "multer": "1.3.1",
-    "request": "2.88.0"
-  },
-  "license": "MIT",
-  "repository": {
-    "type": "web",
-    "url": "http://metacoin.network"
-  },
-  "author": "Leslie",
-  "keywords": [
-    "MetaCoin",
-    "MTC"
-  ]
+        "name": "metacoin-node",
+        "version": "2.2.0",
+        "main": "mtcnode.js",
+        "description": "MetaCoin Node",
+        "license": "MIT",
+        "repository": {
+                "type": "git",
+                "url": "http://metacoin.network"
+        },
+        "author": "Inblock",
+        "keywords": [
+                "MetaCoin",
+                "MTC"
+        ],
+        "dependencies": {
+                "bignumber.js": "^9.1.0",
+                "crc": "^4.1.1",
+                "express": "^4.18.1",
+                "level-rocksdb": "^5.0.0",
+                "superagent": "^8.0.0",
+                "winston": "^3.8.1",
+                "yarn": "^1.22.19"
+        },
+        "scripts": {
+                "start": "nodemon mtcnode.js"
+        },
+        "engines": {
+                "node": "^12",
+                "yarn": "^1.16.0"
+        },
+        "eslintConfig": {
+                "root": true,
+                "env": {
+                        "node": true
+                },
+                "extends": [
+                        "eslint:recommended"
+                ],
+                "parserOptions": {
+                        "ecmaVersion": 2015,
+                        "parser": "babel-eslint",
+                        "sourceType": "module"
+                },
+                "rules": {
+                        "no-unused-vars": [
+                                "warn",
+                                {
+                                        "vars": "all"
+                                }
+                        ]
+                }
+        },
+        "devDependencies": {
+                "nodemon": "^2.0.19"
+        }
 }
