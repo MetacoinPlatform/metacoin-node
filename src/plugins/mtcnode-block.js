@@ -68,6 +68,8 @@ class MetacoinBlockProcessor {
 
 						case "transfer":
 						case "multi_transfer":
+						case "transfer_mrc010buy":
+						case "transfer_mrc010bid":
 						case "stodexRegister":
 						case "mrc030create":
 						case "transfer_mrc401buy":  // MRC401 buyer update
@@ -93,11 +95,18 @@ class MetacoinBlockProcessor {
 						case "mrc030refund":
 
 						// token change by mrc401
+						case "receive_mrc010fee":
+						case "receive_mrc010sell":
+						case "receive_mrc010auction":
+						case "receive_mrc010refund":
+						case "receive_mrc010item":
+
 						case "receive_mrc401buy":  // MRC401 seller update
 						case "receive_mrc401sell":  // MRC401 seller update
 						case "receive_mrc401fee":   // MRC401 fee update
 						case "receive_mrc401refund":
 						case "receive_mrc401auction":
+
 						case "receive_mrc402":
 						case "receive_mrc402fee":
 						case "receive_mrc402sell":
@@ -137,6 +146,27 @@ class MetacoinBlockProcessor {
 								value: JSON.stringify(d.parameters)
 							});
 							break;
+
+
+						case "mrc010_sell":
+						case "mrc010_unsell":
+						case "mrc010_buy":
+						case "mrc010_auction":
+						case "mrc010_auctionbuynow":
+						case "mrc010_auctionbid":
+						case "mrc010_unauction":
+						case "mrc010_auctionwinning":
+						case "mrc010_auctionfailure":
+							logger.debug('MRC010DEX update %s', d.parameters[0]);
+							save_data.push({
+								type: 'put',
+								key: "MRC010DEX:DB:" + d.parameters[0],
+								value: JSON.stringify(d.values)
+							});
+					
+
+							break;
+
 						case "exchange":
 							save_addr = d.parameters[0];
 							break;
@@ -248,6 +278,13 @@ class MetacoinBlockProcessor {
 							break;
 
 						// update owner nonce
+						case "mrc010sell":
+						case "mrc010unsell":
+						case "mrc010buy":
+						case "mrc010auction":
+						case "mrc010unauction":
+						case "mrc010auctionfailure":
+
 						case "mrc400create":
 						case "mrc400update":
 						case "mrc401create":
@@ -365,7 +402,7 @@ class MetacoinBlockProcessor {
 
 module.exports = function (rocksDBObject) {
 	const MTCBlockProc = new MetacoinBlockProcessor(rocksDBObject)
-    MTCBlockProc.start()
+	MTCBlockProc.start()
 	return function (req, res, next) {
 		Object.defineProperty(req, "MTCBlockProc", {
 			writable: false,

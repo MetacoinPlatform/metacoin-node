@@ -8,7 +8,8 @@ const { logger } = require('../utils/lib.winston')
 
 const { NumberPadding,
     ParameterCheck } = require('../utils/lib')
-const { default_response_process,
+const { default_txresponse_process,
+    default_response_process,
     response } = require('../utils/lib.express')
 
 function get_token(req, res) {
@@ -184,7 +185,7 @@ function post_token_burn(req, res) {
     ParameterCheck(req.body, 'token');
     ParameterCheck(req.body, 'signature');
     ParameterCheck(req.body, 'amount');
-    ParameterCheck(req.body, 'memo', true);
+    ParameterCheck(req.body, 'memo', "string", true);
     ParameterCheck(req.params, 'tkey');
 
     request.put(config.MTCBridge + "/token/burn/" + req.params.tkey,
@@ -197,7 +198,7 @@ function post_token_increase(req, res) {
     ParameterCheck(req.body, 'token');
     ParameterCheck(req.body, 'signature');
     ParameterCheck(req.body, 'amount');
-    ParameterCheck(req.body, 'memo', true);
+    ParameterCheck(req.body, 'memo', "string", true);
     ParameterCheck(req.params, 'tkey');
 
     request.put(config.MTCBridge + "/token/increase/" + req.params.tkey,
