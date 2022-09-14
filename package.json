@@ -25,10 +25,6 @@
         "scripts": {
                 "start": "nodemon mtcnode.js"
         },
-        "engines": {
-                "node": "^12",
-                "yarn": "^1.16.0"
-        },
         "eslintConfig": {
                 "root": true,
                 "env": {
