@@ -51,7 +51,9 @@ class MetacoinBlockProcessor {
 					if (d.validationCode != 0) {
 						return;
 					}
+					console.log(d.type, d.parameters[0], d.parameters[1]);
 					switch (d.type) {
+
 						case "Chaincode Install or Update":
 							break;
 						case "NewWallet":
@@ -69,7 +71,9 @@ class MetacoinBlockProcessor {
 						case "transfer":
 						case "multi_transfer":
 						case "transfer_mrc010buy":
+						case "transfer_mrc010sell":
 						case "transfer_mrc010bid":
+						case "transfer_mrc010item":
 						case "stodexRegister":
 						case "mrc030create":
 						case "transfer_mrc401buy":  // MRC401 buyer update
@@ -97,6 +101,7 @@ class MetacoinBlockProcessor {
 						// token change by mrc401
 						case "receive_mrc010fee":
 						case "receive_mrc010sell":
+						case "receive_mrc010buy":
 						case "receive_mrc010auction":
 						case "receive_mrc010refund":
 						case "receive_mrc010item":
@@ -151,6 +156,9 @@ class MetacoinBlockProcessor {
 						case "mrc010_sell":
 						case "mrc010_unsell":
 						case "mrc010_buy":
+						case "mrc010_reqsell":
+						case "mrc010_unreqsell":
+						case "mrc010_acceptreqsell":
 						case "mrc010_auction":
 						case "mrc010_auctionbuynow":
 						case "mrc010_auctionbid":
@@ -163,7 +171,7 @@ class MetacoinBlockProcessor {
 								key: "MRC010DEX:DB:" + d.parameters[0],
 								value: JSON.stringify(d.values)
 							});
-					
+
 
 							break;
 
@@ -280,7 +288,8 @@ class MetacoinBlockProcessor {
 						// update owner nonce
 						case "mrc010sell":
 						case "mrc010unsell":
-						case "mrc010buy":
+						case "mrc010reqsell":
+						case "mrc010unreqsell":
 						case "mrc010auction":
 						case "mrc010unauction":
 						case "mrc010auctionfailure":

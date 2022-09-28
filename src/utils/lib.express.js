@@ -38,8 +38,17 @@ function default_response_process(error, req, res, body) {
 }
 
 function default_txresponse_process(error, req, res, body, extra_key) {
+    let rv = {
+        txid: '',
+        result: 'ERROR',
+        message: '',
+        data: '',
+        code: '0'
+    };
+
     if (error != null) {
-        response(req, res, 412, "MTC Server connection error");
+        rv.message = 'MTC Server connection error'
+        response(req, res, 412, rv);
         return;
     }
 
@@ -47,22 +56,29 @@ function default_txresponse_process(error, req, res, body, extra_key) {
     try {
         data = JSON.parse(body.text);
     } catch (err) {
-        response(req, res, 400, 'MTC Main node response parsing error');
+        rv.message = 'MTC Main node response parsing error'
+        response(req, res, 400, rv);
         return;
     }
     if (data == null || data.result == undefined) {
-        response(req, res, 400, 'MTC Main node response error');
+        rv.message = 'MTC Main node response error'
+        response(req, res, 400, rv);
         return;
     }
     if (data.result != 'SUCCESS') {
-        response(req, res, 412, data.msg);
+        if(data.msg.substring(4, 5) == ","){
+            rv.message = data.msg.substring(5)
+            rv.code = data.msg.substring(0, 4)
+        } else {
+            rv.message = data.msg
+        }
+
+        response(req, res, 412, rv);
         return;
     }
 
-    let rv = {
-        txid: data.data
-    };
-
+    rv.txid = data.data
+    rv.result = 'SUCCESS'
     if (extra_key && data.msg) {
         rv[extra_key] = data.msg;
     }
