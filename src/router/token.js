@@ -206,9 +206,6 @@ function post_token_increase(req, res) {
         function (err, response) { default_response_process(err, req, res, response) });
 }
 
-
-
-
 function post_transfer(req, res) {
     ParameterCheck(req.body, 'from', "address");
     ParameterCheck(req.body, 'to', "address");
@@ -262,11 +259,6 @@ function post_multitransfer(req, res, next) {
         req.body,
         function (err, response) { default_response_process(err, req, res, response,) });
 }
-
-
-
-
-
 function post_exchange(req, res) {
     ParameterCheck(req.body, 'fromAddr');
     ParameterCheck(req.body, 'fromAmount');
@@ -294,8 +286,6 @@ function post_exchange(req, res) {
         function (err, response) { default_response_process(err, req, res, response) });
 }
 
-
-
 function get_mrc010_dex(req, res) {
     ParameterCheck(req.params, 'mrc010dexid');
     req.db.get('MRC010DEX:DB:' + req.params.mrc010dexid)
@@ -306,7 +296,6 @@ function get_mrc010_dex(req, res) {
             response(req, res, 404, 'MRC010DEX ' + req.params.mrc010dexid + ' not found');
         });
 }
-
 
 function post_token_sell(req, res) {
     ParameterCheck(req.body, 'address', 'address');
@@ -345,8 +334,6 @@ function post_token_buy(req, res) {
         req.body,
         function (err, response) { default_txresponse_process(err, req, res, response); });
 }
-
-
 
 function post_token_reqsell(req, res) {
     ParameterCheck(req.body, 'address', 'address');
