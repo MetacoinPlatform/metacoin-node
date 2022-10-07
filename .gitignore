@@ -1,7 +1,6 @@
 db
 .cvsignore
-hfc-key-store/*
-node_modules/*
+node_modules
 .cvsignore
 CVS/*
 *.bak
