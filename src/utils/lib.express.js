@@ -37,7 +37,40 @@ function default_response_process(error, req, res, body) {
     response(req, res, 200, data.data);
 }
 
+
 function default_txresponse_process(error, req, res, body, extra_key) {
+    if (error != null) {
+        response(req, res, 412, "MTC Server connection error");
+        return;
+    }
+
+    var data;
+    try {
+        data = JSON.parse(body.text);
+    } catch (err) {
+        response(req, res, 400, 'MTC Main node response parsing error');
+        return;
+    }
+    if (data == null || data.result == undefined) {
+        response(req, res, 400, 'MTC Main node response error');
+        return;
+    }
+    if (data.result != 'SUCCESS') {
+        response(req, res, 412, data.msg);
+        return;
+    }
+
+    let rv = {
+        txid: data.data
+    };
+
+    if (extra_key && data.msg) {
+        rv[extra_key] = data.msg;
+    }
+    response(req, res, 200, rv);
+}
+
+function txresponse_process_v2(error, req, res, body, extra_key) {
     let rv = {
         txid: '',
         result: 'ERROR',
