@@ -306,7 +306,8 @@ function post_token_sell(req, res) {
     ParameterCheck(req.body, 'platform_url', "url", true, 0, 255);
     ParameterCheck(req.body, 'platform_address', "address", true);
     ParameterCheck(req.body, 'platform_commission', "string", true, 0, 5);
-
+    ParameterCheck(req.body, 'min_trade_unit', "int", true, 1, 100000000);
+    
     ParameterCheck(req.body, 'signature');
     ParameterCheck(req.body, 'tkey');
 
@@ -344,6 +345,7 @@ function post_token_reqsell(req, res) {
     ParameterCheck(req.body, 'platform_url', "url", true, 0, 255);
     ParameterCheck(req.body, 'platform_address', "address", true);
     ParameterCheck(req.body, 'platform_commission', "string", true, 0, 5);
+    ParameterCheck(req.body, 'min_trade_unit', "int", true, 1, 100000000);
 
     ParameterCheck(req.body, 'signature');
     ParameterCheck(req.body, 'tkey');
