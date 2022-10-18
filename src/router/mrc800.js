@@ -9,13 +9,13 @@ const { default_txresponse_process,
 function get_mrc800(req, res) {
     ParameterCheck(req.params, 'mrc800id');
 
-    req.db.get('MRC800:DB:' + req.params.mrc800id)
-        .then(function (value) {
-            response(req, res, 200, value);
-        })
-        .catch(function (err) {
+    req.db.get('MRC800:DB:' + req.params.mrc800id, { asBuffer: false }, (isError, value) => {
+        if (isError) {
             response(req, res, 404, 'MRC800 ' + req.params.mrc800id + ' not found');
-        });
+        } else {
+            response(req, res, 200, value);
+        }
+    });
 }
 
 function post_mrc800(req, res) {

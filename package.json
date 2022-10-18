@@ -17,8 +17,8 @@
                 "bignumber.js": "^9.1.0",
                 "crc": "^4.1.1",
                 "express": "^4.18.1",
-                "level-rocksdb": "^5.0.0",
-                "superagent": "^8.0.0",
+                "rocksdb": "^5.2.1",
+                "superagent": "8.0.0",
                 "winston": "^3.8.1",
                 "yarn": "^1.22.19"
         },
