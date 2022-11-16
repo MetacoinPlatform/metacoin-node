@@ -13,93 +13,95 @@ const { default_txresponse_process,
     response } = require('../utils/lib.express')
 
 function get_token(req, res) {
-    req.db.get('TOKEN:DB:' + NumberPadding(req.params.token_id))
-        .then(function (value) {
-            var data = JSON.parse(value);
-            if (data.type == undefined || data.type == "") {
-                data.type = "010";
-            }
-            data.circulation_supply = BigNumber(data.totalsupply);
-            req.db.get('ADDRESS:CURRENT:' + data.owner)
-                .then(function (value) {
-                    var a = JSON.parse(value);
-                    for (var k in a.pending) {
-                        a.balance.push({
-                            balance: "0",
-                            token: k,
-                            unlockdate: "0",
-                            pending: a.pending[k]
-                        });
-                    }
-                    var tx;
-                    for (var t in a.balance) {
-                        if (a.balance[t].token != req.params.token_id) {
-                            continue;
-                        }
-                        try {
-                            tx = BigNumber(a.balance[t].balance);
-                        } catch (err) {
-                            logger.error(err);
-                            continue;
-                        }
-                        data.circulation_supply = data.circulation_supply.minus(tx);
-                    }
-                    response(req, res, 200, JSON.stringify(data));
-                })
-                .catch(function (err) {
-                    logger.error(err);
-                    response(req, res, 200, JSON.stringify(data));
-                });
-        })
-        .catch(function (err) {
+    req.db.get('TOKEN:DB:' + NumberPadding(req.params.token_id), { asBuffer: false }, (isError, value) => {
+        if (isError) {
             logger.error(err);
             response(req, res, 404, 'Token ' + req.params.token_id + ' not found');
+            return;
+        }
+        var data = JSON.parse(value);
+        if (data.type == undefined || data.type == "") {
+            data.type = "010";
+        }
+        data.circulation_supply = BigNumber(data.totalsupply);
+        req.db.get('ADDRESS:CURRENT:' + data.owner, { asBuffer: false }, (isError, value) => {
+            if (isError) {
+                logger.error(err);
+                response(req, res, 200, JSON.stringify(data));
+                return;
+            }
+
+            var a = JSON.parse(value);
+            for (var k in a.pending) {
+                a.balance.push({
+                    balance: "0",
+                    token: k,
+                    unlockdate: "0",
+                    pending: a.pending[k]
+                });
+            }
+            var tx;
+            for (var t in a.balance) {
+                if (a.balance[t].token != req.params.token_id) {
+                    continue;
+                }
+                try {
+                    tx = BigNumber(a.balance[t].balance);
+                } catch (err) {
+                    logger.error(err);
+                    continue;
+                }
+                data.circulation_supply = data.circulation_supply.minus(tx);
+            }
+            response(req, res, 200, JSON.stringify(data));
         });
+    });
 }
 
 function get_totalsupply(req, res) {
-    req.db.get('TOKEN:DB:' + NumberPadding(req.params.token_id))
-        .then(function (value) {
-            var data = JSON.parse(value);
-            if (data.type == undefined || data.type == "") {
-                data.type = "010";
-            }
-            data.circulation_supply = BigNumber(data.totalsupply);
-            req.db.get('ADDRESS:CURRENT:' + data.owner)
-                .then(function (value) {
-                    var a = JSON.parse(value);
-                    for (var k in a.pending) {
-                        a.balance.push({
-                            balance: "0",
-                            token: k,
-                            unlockdate: "0",
-                            pending: a.pending[k]
-                        });
-                    }
-                    var tx;
-                    for (var t in a.balance) {
-                        if (a.balance[t].token != req.params.token_id) {
-                            continue;
-                        }
-                        try {
-                            tx = BigNumber(a.balance[t].balance);
-                        } catch (err) {
-                            logger.error(err);
-                            continue;
-                        }
-                        data.circulation_supply = data.circulation_supply.minus(tx);
-                    }
-                    response(req, res, 200, "" + data.circulation_supply / Math.pow(10, data.decimal));
-                })
-                .catch(function (err) {
-                    logger.error(err);
-                    response(req, res, 200, JSON.stringify(data));
-                });
-        })
-        .catch(function (err) {
+    req.db.get('TOKEN:DB:' + NumberPadding(req.params.token_id), { asBuffer: false }, (isError, value) => {
+        if (isError) {
             logger.error(err);
             response(req, res, 404, 'Token ' + req.params.token_id + ' not found');
+            return;
+        }
+
+        var data = JSON.parse(value);
+        if (data.type == undefined || data.type == "") {
+            data.type = "010";
+        }
+        data.circulation_supply = BigNumber(data.totalsupply);
+        req.db.get('ADDRESS:CURRENT:' + data.owner, { asBuffer: false }, (isError, value) => {
+            if (isError) {
+                logger.error(err);
+                response(req, res, 200, JSON.stringify(data));
+                return;
+            }
+            var a = JSON.parse(value);
+            for (var k in a.pending) {
+                a.balance.push({
+                    balance: "0",
+                    token: k,
+                    unlockdate: "0",
+                    pending: a.pending[k]
+                });
+            }
+            var tx;
+            for (var t in a.balance) {
+                if (a.balance[t].token != req.params.token_id) {
+                    continue;
+                }
+                try {
+                    tx = BigNumber(a.balance[t].balance);
+                } catch (err) {
+                    logger.error(err);
+                    continue;
+                }
+                data.circulation_supply = data.circulation_supply.minus(tx);
+            }
+            response(req, res, 200, "" + data.circulation_supply / Math.pow(10, data.decimal));
         });
+    });
 }
 
 function post_token(req, res) {
@@ -288,13 +290,13 @@ function post_exchange(req, res) {
 
 function get_mrc010_dex(req, res) {
     ParameterCheck(req.params, 'mrc010dexid');
-    req.db.get('MRC010DEX:DB:' + req.params.mrc010dexid)
-        .then(function (value) {
-            response(req, res, 200, value);
-        })
-        .catch(function (err) {
+    req.db.get('MRC010DEX:DB:' + req.params.mrc010dexid, { asBuffer: false }, (isError, value) => {
+        if (isError) {
             response(req, res, 404, 'MRC010DEX ' + req.params.mrc010dexid + ' not found');
-        });
+        } else {
+            response(req, res, 200, value);
+        }
+    });
 }
 
 function post_token_sell(req, res) {
@@ -307,7 +309,7 @@ function post_token_sell(req, res) {
     ParameterCheck(req.body, 'platform_address', "address", true);
     ParameterCheck(req.body, 'platform_commission', "string", true, 0, 5);
     ParameterCheck(req.body, 'min_trade_unit', "int", true, 1, 100000000);
-    
+
     ParameterCheck(req.body, 'signature');
     ParameterCheck(req.body, 'tkey');
 

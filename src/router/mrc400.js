@@ -13,26 +13,25 @@ const { default_txresponse_process,
 function get_mrc400(req, res) {
     ParameterCheck(req.params, 'mrc400id');
 
-    req.db.get('MRC400:DB:' + req.params.mrc400id)
-        .then(function (value) {
-            response(req, res, 200, value);
-        })
-        .catch(function (err) {
+    req.db.get('MRC400:DB:' + req.params.mrc400id, { asBuffer: false }, (isError, value) => {
+        if (isError) {
             response(req, res, 404, 'MRC400 ' + req.params.mrc400id + ' not found');
-        });
-
+        } else {
+            response(req, res, 200, value);
+        }
+    });
 }
 
 function get_mrc401(req, res) {
     ParameterCheck(req.params, 'mrc401id');
 
-    req.db.get('MRC401:DB:' + req.params.mrc401id)
-        .then(function (value) {
-            response(req, res, 200, value);
-        })
-        .catch(function (err) {
+    req.db.get('MRC401:DB:' + req.params.mrc401id, { asBuffer: false }, (isError, value) => {
+        if (isError) {
             response(req, res, 404, 'MRC401 ' + req.params.mrc031key + ' not found');
-        });
+        } else {
+            response(req, res, 200, value);
+        }
+    });
 }
 
 

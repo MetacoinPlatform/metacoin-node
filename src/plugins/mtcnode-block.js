@@ -15,14 +15,16 @@ class MetacoinBlockProcessor {
 
 	start() {
 		this.db.open(() => {
-			this.db.get('STAT:DB:CURRENT_NUMBER').then((value) => {
-				this.max_db_number = parseInt(value)
-				this.max_db_number = this.max_db_number + 1
-				this.getFabricBlock()
-			}).catch((err) => {
-				logger.error(err)
-				this.max_db_number = 1
-				this.getFabricBlock()
+			this.db.get('STAT:DB:CURRENT_NUMBER', { asBuffer: false }, (isError, value) => {
+				if (isError) {
+					logger.error(err)
+					this.max_db_number = 1
+					this.getFabricBlock()
+				} else {
+					this.max_db_number = parseInt(value)
+					this.max_db_number = this.max_db_number + 1
+					this.getFabricBlock()
+				}
 			});
 		});
 	}
@@ -51,22 +53,23 @@ class MetacoinBlockProcessor {
 					if (d.validationCode != 0) {
 						return;
 					}
-					console.log(d.type, d.parameters[0], d.parameters[1]);
 					switch (d.type) {
 
 						case "Chaincode Install or Update":
 							break;
 						case "NewWallet":
 							var fix_key = d.parameters[1].replace(/(\r\n|\n|\r|-----BEGIN PUBLIC KEY-----|-----END PUBLIC KEY-----)/gm, "").trim();
-							this.db.get('ADDR_BY_PUBLICKEY:' + fix_key)
-								.then((value) => {
+							this.db.get('ADDR_BY_PUBLICKEY:' + fix_key, { asBuffer: false }, (isError, value) => {
+								if (isError) {
+									this.db.put('ADDR_BY_PUBLICKEY:' + fix_key, JSON.stringify([d.parameters[0]]),
+										() => { });
+								} else {
 									var a = JSON.parse(value);
 									a.push(d.parameters[0]);
-									this.db.put('ADDR_BY_PUBLICKEY:' + fix_key, JSON.stringify(a));
-								})
-								.catch((err) => {
-									this.db.put('ADDR_BY_PUBLICKEY:' + fix_key, JSON.stringify([d.parameters[0]]));
-								});
+									this.db.put('ADDR_BY_PUBLICKEY:' + fix_key, JSON.stringify(a),
+										() => { });
+								}
+							});
 
 						case "transfer":
 						case "multi_transfer":
@@ -346,13 +349,13 @@ class MetacoinBlockProcessor {
 					key: "TX:TX:" + data.data[0].id,
 					value: JSON.stringify(data.data)
 				})
-				this.db.batch(save_data)
-					.then(() => {
-						logger.debug('Transaction save %s, %s, %s', data.data[0].id, db_id, db_sn);
-					})
-					.catch((err) => {
+				this.db.batch(save_data, (isError) => {
+					if (isError) {
 						logger.error('Transaction save ERROR!!! [%s] %s', data.data[0].id, err.message);
-					});
+					} else {
+						logger.debug('Transaction save %s, %s, %s', data.data[0].id, db_id, db_sn);
+					}
+				});
 			});
 	}
 	getFabricBlock() {
@@ -395,16 +398,16 @@ class MetacoinBlockProcessor {
 					value: this.max_db_number
 				});
 
-				this.db.batch(save_data)
-					.then(() => {
+				this.db.batch(save_data, (isError) => {
+					if (isError) {
+						logger.error('Block [%s] save error %s', this.max_db_number, err.message);
+						setImmediate(this.getFabricBlock.bind(this));
+					} else {
 						logger.info('Block [%s] save, TX Index %s ', data.data.sn, tx_idx);
 						this.max_db_number = this.max_db_number + 1;
 						setImmediate(this.getFabricBlock.bind(this));
-					})
-					.catch((err) => {
-						logger.error('Block [%s] save error %s', this.max_db_number, err.message);
-						setImmediate(this.getFabricBlock.bind(this));
-					});
+					}
+				});
 			});
 	}
 }

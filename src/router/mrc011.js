@@ -25,7 +25,6 @@ function post_mrc011(req, res) {
         function (err, response) { default_response_process(err, req, res, response) });
 }
 
-
 function put_mrc011(req, res) {
     ParameterCheck(req.params, 'tkey');
     ParameterCheck(req.body, 'token');
