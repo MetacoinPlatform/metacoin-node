@@ -7,30 +7,17 @@ const { default_response_process,
 	response } = require('../utils/lib.express')
 
 
-function get_key(req, res) {
-	ParameterCheck(req.params, 'address', "address");
-
-	let allowkey = {
-		'transfer': 1,
-		'token': 1,
-		'dapp': 1,
-		'exchange': 1,
-		'mrc020': 1,
-		'mrc030': 1,
-		'mrc040': 1,
-		'mrc100': 1,
-	}
-	if (allowkey[req.params.keytype] == undefined) {
-		response(req, res, 412, "Key type unknown");
-		return;
-	}
-	request.get(config.MTCBridge + "/getkey/" + req.params.keytype + '/' + req.params.address,
-		function (err, response) { default_response_process(err, req, res, response) });
-
-}
-
 function get_nonce(req, res) {
 	ParameterCheck(req.params, 'address', "address");
+	try{
+		const block_addr = require('../../block_addr.json');
+		if(req.params.address in block_addr){
+			response(req, res, 404, 'Address ' + req.params.address + ' is blocked');
+			return;
+		}
+	} catch(e){
+		// block_addr json file not exists or ...
+	}
 
 	request.get(config.MTCBridge + "/nonce/" + req.params.address,
 		function (err, response) { default_response_process(err, req, res, response); });
@@ -132,7 +119,7 @@ function post_address_by_key(req, res) {
 	});
 }
 
-router.get('/getkey/:keytype/:address', get_key);
+router.get('/getkey/:keytype/:address', get_nonce);
 router.get('/nonce/:address', get_nonce);
 router.get('/balance/:address', get_balance);
 router.get('/balanceex/:address', get_balanceex);
