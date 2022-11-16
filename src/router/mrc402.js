@@ -8,24 +8,24 @@ const { default_txresponse_process,
 
 function get_mrc402(req, res) {
     ParameterCheck(req.params, 'mrc402id');
-    req.db.get('MRC402:DB:' + req.params.mrc402id)
-        .then(function (value) {
-            response(req, res, 200, value);
-        })
-        .catch(function (err) {
+    req.db.get('MRC402:DB:' + req.params.mrc402id, { asBuffer: false }, (isError, value) => {
+        if (isError) {
             response(req, res, 404, 'MRC402 ' + req.params.mrc400id + ' not found');
-        });
+        } else {
+            response(req, res, 200, value);
+        }
+    });
 }
 
 function get_mrc402_dex(req, res) {
     ParameterCheck(req.params, 'mrc402dexid');
-    req.db.get('MRC402DEX:DB:' + req.params.mrc402dexid)
-        .then(function (value) {
-            response(req, res, 200, value);
-        })
-        .catch(function (err) {
+    req.db.get('MRC402DEX:DB:' + req.params.mrc402dexid, { asBuffer: false }, (isError, value) => {
+        if (isError) {
             response(req, res, 404, 'MRC402DEX ' + req.params.mrc402dexid + ' not found');
-        });
+        } else {
+            response(req, res, 200, value);
+        }
+    });
 }
 
 function post_mrc402(req, res) {

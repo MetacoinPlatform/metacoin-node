@@ -8,24 +8,24 @@ const { default_response_process,
     response } = require('../utils/lib.express')
 
 function get_mrc030(req, res) {
-    req.db.get('MRC030:DB:' + req.params.mrc030key)
-        .then(function (value) {
-            response(req, res, 200, value);
-        })
-        .catch(function (err) {
-            response(req, res, 404, 'MRC030 ' + req.params.mrc030key + ' not found');
-        });
+    req.db.get('MRC030:DB:' + req.params.mrc030key, { asBuffer: false }, (isError, value) => {
+		if (isError) {
+			response(req, res, 404, 'MRC030 ' + req.params.mrc030key + ' not found');
+		} else {
+			response(req, res, 200, value);
+		}
+	});
 }
 
 
 function get_mrc031(req, res) {
-    req.db.get('MRC031:DB:' + req.params.mrc031key)
-        .then(function (value) {
-            response(req, res, 200, value);
-        })
-        .catch(function (err) {
-            response(req, res, 404, 'MRC031 ' + req.params.mrc031key + ' not found');
-        });
+    req.db.get('MRC031:DB:' + req.params.mrc031key, { asBuffer: false }, (isError, value) => {
+		if (isError) {
+			response(req, res, 404, 'MRC031 ' + req.params.mrc031key + ' not found');
+		} else {
+			response(req, res, 200, value);
+		}
+	});
 }
 
 
