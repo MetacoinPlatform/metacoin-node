@@ -4,6 +4,7 @@ const config = require('../../config.json');
 const { request } = require('../utils/lib.superagent')
 const { ParameterCheck } = require('../utils/lib')
 const { default_txresponse_process,
+    default_response_process,
     response } = require('../utils/lib.express')
 
 
@@ -15,7 +16,10 @@ function get_mrc400(req, res) {
 
     req.db.get('MRC400:DB:' + req.params.mrc400id, { asBuffer: false }, (isError, value) => {
         if (isError) {
-            response(req, res, 404, 'MRC400 ' + req.params.mrc400id + ' not found');
+            request.get(config.MTCBridge + "/mrc400/" + req.params.mrc400id,
+                function (err, response) {
+                    default_response_process(err, req, res, response, 'MRC400:DB:' + req.params.mrc400id)
+                });
         } else {
             response(req, res, 200, value);
         }
@@ -27,7 +31,10 @@ function get_mrc401(req, res) {
 
     req.db.get('MRC401:DB:' + req.params.mrc401id, { asBuffer: false }, (isError, value) => {
         if (isError) {
-            response(req, res, 404, 'MRC401 ' + req.params.mrc031key + ' not found');
+            request.get(config.MTCBridge + "/mrc401/" + req.params.mrc401id,
+                function (err, response) {
+                    default_response_process(err, req, res, response, 'MRC401:DB:' + req.params.mrc401id)
+                });
         } else {
             response(req, res, 200, value);
         }

@@ -38,7 +38,7 @@ class MetacoinBlockProcessor {
 					return;
 				}
 				let data = JSON.parse(body.text);
-				if (data == null || data.result == undefined || data.result != 'SUCCESS') {
+				if (data == null || data.result === undefined || data.result != 'SUCCESS') {
 					return;
 				}
 
@@ -372,7 +372,7 @@ class MetacoinBlockProcessor {
 				} catch (err) {
 					return;
 				}
-				if (data == null || data.result == undefined || data.result != 'SUCCESS') {
+				if (data == null || data.result === undefined || data.result != 'SUCCESS') {
 					setTimeout(this.getFabricBlock.bind(this), 1000);
 					return;
 				}
