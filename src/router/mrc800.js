@@ -4,6 +4,7 @@ const config = require('../../config.json');
 const { request } = require('../utils/lib.superagent')
 const { ParameterCheck } = require('../utils/lib')
 const { default_txresponse_process,
+    default_response_process,
     response } = require('../utils/lib.express')
 
 function get_mrc800(req, res) {
@@ -11,7 +12,10 @@ function get_mrc800(req, res) {
 
     req.db.get('MRC800:DB:' + req.params.mrc800id, { asBuffer: false }, (isError, value) => {
         if (isError) {
-            response(req, res, 404, 'MRC800 ' + req.params.mrc800id + ' not found');
+            request.get(config.MTCBridge + "/mrc800/" + req.params.mrc800id,
+                function (err, response) {
+                    default_response_process(err, req, res, response, 'MRC800:DB:' + req.params.mrc800id)
+                });
         } else {
             response(req, res, 200, value);
         }

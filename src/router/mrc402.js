@@ -1,16 +1,20 @@
 const router = require('express').Router()
 const config = require('../../config.json');
 
-const {request} = require('../utils/lib.superagent')
+const { request } = require('../utils/lib.superagent')
 const { ParameterCheck } = require('../utils/lib')
 const { default_txresponse_process,
+    default_response_process,
     response } = require('../utils/lib.express')
 
 function get_mrc402(req, res) {
     ParameterCheck(req.params, 'mrc402id');
     req.db.get('MRC402:DB:' + req.params.mrc402id, { asBuffer: false }, (isError, value) => {
         if (isError) {
-            response(req, res, 404, 'MRC402 ' + req.params.mrc400id + ' not found');
+            request.get(config.MTCBridge + "/mrc402/" + req.params.mrc402id,
+                function (err, response) {
+                    default_response_process(err, req, res, response, 'MRC402:DB:' + req.params.mrc402id)
+                });
         } else {
             response(req, res, 200, value);
         }
@@ -21,7 +25,10 @@ function get_mrc402_dex(req, res) {
     ParameterCheck(req.params, 'mrc402dexid');
     req.db.get('MRC402DEX:DB:' + req.params.mrc402dexid, { asBuffer: false }, (isError, value) => {
         if (isError) {
-            response(req, res, 404, 'MRC402DEX ' + req.params.mrc402dexid + ' not found');
+            request.get(config.MTCBridge + "/mrc402/dex/" + req.params.mrc402dexid,
+                function (err, response) {
+                    default_response_process(err, req, res, response, 'MRC402DEX:DB:' + req.params.mrc402dexid)
+                });
         } else {
             response(req, res, 200, value);
         }

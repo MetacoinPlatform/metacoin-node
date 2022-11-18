@@ -8,12 +8,12 @@ function errorHandler(err, req, res, next) {
     if (err.message.indexOf('not found') > -1) {
         response(req, res, 404, message);
     } else {
-		logger.error('%s', err);
+        logger.error('%s', err);
         response(req, res, 412, err.message);
     }
 }
 
-function default_response_process(error, req, res, body) {
+function default_response_process(error, req, res, body, saveKey) {
     if (error != null) {
         response(req, res, 412, "MTC Server connection error");
         return;
@@ -26,15 +26,27 @@ function default_response_process(error, req, res, body) {
         response(req, res, 400, 'MTC Main node response error');
         return;
     }
-    if (data == null || data.result == undefined) {
+    if (data == null || data.result === undefined) {
         response(req, res, 400, 'MTC Main node response error');
         return;
     }
-    if (data.result != 'SUCCESS') {
-        response(req, res, 412, data.msg);
-        return;
+
+    if (saveKey === undefined) {
+        if (data.result != 'SUCCESS') {
+            response(req, res, 412, data.msg);
+        } else {
+            response(req, res, 200, data.data);
+        }
+    } else {
+        if (data.result != 'SUCCESS') {
+            response(req, res, 404, data.msg);
+        } else {
+            req.db.put(saveKey, data.data, function () {
+                response(req, res, 200, data.data);
+            });
+        }
     }
-    response(req, res, 200, data.data);
+
 }
 
 
@@ -51,7 +63,7 @@ function default_txresponse_process(error, req, res, body, extra_key) {
         response(req, res, 400, 'MTC Main node response parsing error');
         return;
     }
-    if (data == null || data.result == undefined) {
+    if (data == null || data.result === undefined) {
         response(req, res, 400, 'MTC Main node response error');
         return;
     }
@@ -93,13 +105,13 @@ function txresponse_process_v2(error, req, res, body, extra_key) {
         response(req, res, 400, rv);
         return;
     }
-    if (data == null || data.result == undefined) {
+    if (data == null || data.result === undefined) {
         rv.message = 'MTC Main node response error'
         response(req, res, 400, rv);
         return;
     }
     if (data.result != 'SUCCESS') {
-        if(data.msg.substring(4, 5) == ","){
+        if (data.msg.substring(4, 5) == ",") {
             rv.message = data.msg.substring(5)
             rv.code = data.msg.substring(0, 4)
         } else {
@@ -130,9 +142,13 @@ function response(req, res, status_code, message) {
         status_code,
         (nowTS - req.requestTime.getTime()),
         agent)
-    res.status(status_code)
-        .header('X-METACOIN-NODE', "v2.2.0")
-        .send(message)
+    try {
+        res.status(status_code)
+            .header('X-METACOIN-NODE', "v2.2.0")
+            .send(message)
+    } catch (e) {
+        logger.error(e);
+    }
 }
 
 module.exports = {

@@ -12,7 +12,7 @@ function NumberPadding(a) {
 
 function ParameterCheck(v, n, checktype, isOption, minlength, maxlength) {
     if (v[n] === undefined) {
-        if(typeof(isOption) != 'undefined' && isOption){
+        if(isOption !== undefined && isOption){
             v[n] = '';
             return;
         } else {
@@ -27,27 +27,27 @@ function ParameterCheck(v, n, checktype, isOption, minlength, maxlength) {
         return;
     }
 
-    if(checktype == undefined || checktype == '' || checktype == 'string') {
-        if (maxlength != undefined && maxlength > 0) {
+    if(checktype === undefined || checktype == '' || checktype == 'string') {
+        if (maxlength !== undefined && maxlength > 0) {
             if (v[n].length > maxlength) {
                 throw new Error("The length of parameter " + n + "  must be less than " + maxlength);
             }
         }
 
-        if (minlength != undefined && minlength > 0) {
+        if (minlength !== undefined && minlength > 0) {
             if (v[n].length < minlength) {
                 throw new Error("The length of parameter " + n + "  must be greater than " + minlength);
             }
         }
 
     } else if (checktype == "int") {
-        if (maxlength != undefined && maxlength > 0) {
+        if (maxlength !== undefined && maxlength > 0) {
             if (v[n].length > maxlength) {
                 throw new Error("The length of parameter " + n + "  must be less than " + maxlength);
             }
         }
 
-        if (minlength != undefined && minlength > 0) {
+        if (minlength !== undefined && minlength > 0) {
             if (v[n].length < minlength) {
                 throw new Error("The length of parameter " + n + "  must be greater  than " + minlength);
             }

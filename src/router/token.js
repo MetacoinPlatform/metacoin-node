@@ -20,7 +20,7 @@ function get_token(req, res) {
             return;
         }
         var data = JSON.parse(value);
-        if (data.type == undefined || data.type == "") {
+        if (data.type === undefined || data.type == "") {
             data.type = "010";
         }
         data.circulation_supply = BigNumber(data.totalsupply);
@@ -67,7 +67,7 @@ function get_totalsupply(req, res) {
         }
 
         var data = JSON.parse(value);
-        if (data.type == undefined || data.type == "") {
+        if (data.type === undefined || data.type == "") {
             data.type = "010";
         }
         data.circulation_supply = BigNumber(data.totalsupply);
@@ -111,7 +111,7 @@ function post_token(req, res) {
     ParameterCheck(req.body, 'owner', "address");
 
     var tier_sn = 1;
-    if (req.body.tokenkey == undefined || req.body.tokenkey != 'INBLOCK_AUTH') {
+    if (req.body.tokenkey === undefined || req.body.tokenkey != 'INBLOCK_AUTH') {
         req.body.type = '010';
     }
     if (typeof req.body.tier == typeof []) {
