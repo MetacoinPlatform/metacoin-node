@@ -1,4 +1,4 @@
-const rocks = require('rocksdb')
+const rocks = require('level-rocksdb')
 
 module.exports = function (path, options = {}) {
 	const db = rocks(path, options)
