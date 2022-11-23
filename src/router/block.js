@@ -11,7 +11,7 @@ async function get_block_number(req, res) {
 	try {
 		let db_number = await req.db.get('STAT:DB:CURRENT_NUMBER', { asBuffer: false })
 		default_response(req, res, 200, db_number);
-	} catch (e) {
+	} catch (err) {
 		default_response(req, res, 200, "0");
 	}
 }
@@ -27,7 +27,7 @@ async function get_block(req, res) {
 		}
 		try {
 			db_id = await req.db.get('DB:SN:' + NumberPadding(req.params.block), { asBuffer: false })
-		} catch (e) {
+		} catch (err) {
 			if (err.notFound) {
 				default_response(req, res, 404, 'Block ' + req.params.block + ' not found');
 				return
@@ -54,7 +54,7 @@ async function get_transaction(req, res) {
 	try {
 		let tx = await req.db.get("TX:TX:" + req.params.transaction_id, { asBuffer: false })
 		default_response(req, res, 200, tx);
-	} catch (e) {
+	} catch (err) {
 		http_request.get(config.MTCBridge + "/transaction/" + req.params.transaction_id, function (err, response) {
 			if (err) {
 				default_response(req, res, 404, 'Transaction ' + req.params.transaction_id + ' not found');
