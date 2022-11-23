@@ -1,25 +1,29 @@
 const router = require('express').Router()
 const config = require('../../config.json');
 
-const { request } = require('../utils/lib.superagent')
+const { http_request } = require('../utils/lib.superagent')
 const { ParameterCheck } = require('../utils/lib')
-const { default_txresponse_process,
+const { wrapRoute,
+    default_txresponse_process,
     default_response_process,
-    response } = require('../utils/lib.express')
+    default_response } = require('../utils/lib.express')
 
-function get_mrc800(req, res) {
+async function get_mrc800(req, res) {
     ParameterCheck(req.params, 'mrc800id');
 
-    req.db.get('MRC800:DB:' + req.params.mrc800id, { asBuffer: false }, (isError, value) => {
-        if (isError) {
-            request.get(config.MTCBridge + "/mrc800/" + req.params.mrc800id,
+    try {
+        let mrc800_json = await req.db.get('MRC800:DB:' + req.params.mrc800id, { asBuffer: false })
+        default_response(req, res, 200, mrc800_json);
+    } catch (err) {
+        if (err.notFound) {
+            http_request.get(config.MTCBridge + "/mrc800/" + req.params.mrc800id,
                 function (err, response) {
                     default_response_process(err, req, res, response, 'MRC800:DB:' + req.params.mrc800id)
                 });
         } else {
-            response(req, res, 200, value);
+            throw err
         }
-    });
+    }
 }
 
 function post_mrc800(req, res) {
@@ -31,7 +35,7 @@ function post_mrc800(req, res) {
     ParameterCheck(req.body, 'signature');
     ParameterCheck(req.body, 'tkey');
 
-    request.post(config.MTCBridge + "/mrc800",
+    http_request.post(config.MTCBridge + "/mrc800",
         req.body,
         function (err, response) { default_txresponse_process(err, req, res, response, "mrc800id"); });
 }
@@ -46,7 +50,7 @@ function put_mrc800(req, res) {
     ParameterCheck(req.body, 'signature');
     ParameterCheck(req.body, 'tkey');
 
-    request.put(config.MTCBridge + "/mrc800/" + req.params.mrc400id,
+    http_request.put(config.MTCBridge + "/mrc800/" + req.params.mrc400id,
         req.body,
         function (err, response) { default_txresponse_process(err, req, res, response); });
 
@@ -59,7 +63,7 @@ function post_mrc800_take(req, res) {
     ParameterCheck(req.body, 'signature');
     ParameterCheck(req.body, 'tkey');
 
-    request.post(config.MTCBridge + "/mrc800/take/" + req.params.mrc800id,
+    http_request.post(config.MTCBridge + "/mrc800/take/" + req.params.mrc800id,
         req.body,
         function (err, response) { default_txresponse_process(err, req, res, response); });
 }
@@ -72,7 +76,7 @@ function post_mrc800_give(req, res) {
     ParameterCheck(req.body, 'signature');
     ParameterCheck(req.body, 'tkey');
 
-    request.post(config.MTCBridge + "/mrc800/give/" + req.params.mrc800id,
+    http_request.post(config.MTCBridge + "/mrc800/give/" + req.params.mrc800id,
         req.body,
         function (err, response) { default_txresponse_process(err, req, res, response); });
 }
@@ -85,13 +89,13 @@ function post_mrc800_transfer(req, res) {
     ParameterCheck(req.body, 'signature');
     ParameterCheck(req.body, 'tkey');
 
-    request.post(config.MTCBridge + "/mrc800/transfer/" + req.params.mrc800id,
+    http_request.post(config.MTCBridge + "/mrc800/transfer/" + req.params.mrc800id,
         req.body,
         function (err, response) { default_txresponse_process(err, req, res, response); });
 }
 
 // mrc800 - point
-router.get('/mrc800/:mrc800id', get_mrc800);
+router.get('/mrc800/:mrc800id', wrapRoute(get_mrc800));
 router.post('/mrc800', post_mrc800);
 router.put('/mrc800/:mrc800id', put_mrc800);
 

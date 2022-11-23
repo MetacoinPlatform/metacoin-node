@@ -1,38 +1,47 @@
 const router = require('express').Router()
 const config = require('../../config.json');
 
-const { request } = require('../utils/lib.superagent')
+const { http_request } = require('../utils/lib.superagent')
 const { ParameterCheck } = require('../utils/lib')
-const { default_txresponse_process,
+const { wrapRoute,
+    default_txresponse_process,
     default_response_process,
-    response } = require('../utils/lib.express')
+    default_response } = require('../utils/lib.express')
 
-function get_mrc402(req, res) {
+async function get_mrc402(req, res) {
     ParameterCheck(req.params, 'mrc402id');
-    req.db.get('MRC402:DB:' + req.params.mrc402id, { asBuffer: false }, (isError, value) => {
-        if (isError) {
-            request.get(config.MTCBridge + "/mrc402/" + req.params.mrc402id,
+
+    try {
+        let mrc402_json = await req.db.get('MRC402:DB:' + req.params.mrc402id, { asBuffer: false })
+        default_response(req, res, 200, mrc402_json);
+    } catch (err) {
+        if (err.notFound) {
+            http_request.get(config.MTCBridge + "/mrc402/" + req.params.mrc402id,
                 function (err, response) {
                     default_response_process(err, req, res, response, 'MRC402:DB:' + req.params.mrc402id)
                 });
         } else {
-            response(req, res, 200, value);
+            throw err
         }
-    });
+    }
 }
 
-function get_mrc402_dex(req, res) {
+async function get_mrc402_dex(req, res) {
     ParameterCheck(req.params, 'mrc402dexid');
-    req.db.get('MRC402DEX:DB:' + req.params.mrc402dexid, { asBuffer: false }, (isError, value) => {
-        if (isError) {
-            request.get(config.MTCBridge + "/mrc402/dex/" + req.params.mrc402dexid,
+
+    try {
+        let mrc402_json = await req.db.get('MRC402DEX:DB:' + req.params.mrc402dexid, { asBuffer: false })
+        default_response(req, res, 200, mrc402_json);
+    } catch (err) {
+        if (err.notFound) {
+            http_request.get(config.MTCBridge + "/mrc402/dex/" + req.params.mrc402dexid,
                 function (err, response) {
                     default_response_process(err, req, res, response, 'MRC402DEX:DB:' + req.params.mrc402dexid)
                 });
         } else {
-            response(req, res, 200, value);
+            throw err
         }
-    });
+    }
 }
 
 function post_mrc402(req, res) {
@@ -55,7 +64,7 @@ function post_mrc402(req, res) {
     ParameterCheck(req.body, 'signature');
     ParameterCheck(req.body, 'tkey');
 
-    request.post(config.MTCBridge + "/mrc402",
+    http_request.post(config.MTCBridge + "/mrc402",
         req.body,
         function (err, response) { default_txresponse_process(err, req, res, response, "mrc402id"); });
 }
@@ -70,7 +79,7 @@ function post_mrc402_transfer(req, res) {
     ParameterCheck(req.body, 'signature');
     ParameterCheck(req.body, 'tkey');
 
-    request.post(config.MTCBridge + "/mrc402/transfer/" + req.params.mrc402id,
+    http_request.post(config.MTCBridge + "/mrc402/transfer/" + req.params.mrc402id,
         req.body,
         function (err, response) { default_txresponse_process(err, req, res, response); });
 }
@@ -87,7 +96,7 @@ function put_mrc402(req, res) {
     ParameterCheck(req.body, 'signature');
     ParameterCheck(req.body, 'tkey');
 
-    request.put(config.MTCBridge + "/mrc402/update/" + req.params.mrc402id,
+    http_request.put(config.MTCBridge + "/mrc402/update/" + req.params.mrc402id,
         req.body,
         function (err, response) { default_txresponse_process(err, req, res, response); });
 }
@@ -98,7 +107,7 @@ function put_mrc402_mint(req, res) {
     ParameterCheck(req.body, 'memo', "string", true, 0, 1024);
     ParameterCheck(req.body, 'tkey');
 
-    request.put(config.MTCBridge + "/mrc402/mint/" + req.params.mrc402id,
+    http_request.put(config.MTCBridge + "/mrc402/mint/" + req.params.mrc402id,
         req.body,
         function (err, response) { default_txresponse_process(err, req, res, response); });
 }
@@ -110,7 +119,7 @@ function put_mrc402_burn(req, res) {
     ParameterCheck(req.body, 'memo', "string", true, 0, 1024);
     ParameterCheck(req.body, 'tkey');
 
-    request.put(config.MTCBridge + "/mrc402/burn/" + req.params.mrc402id,
+    http_request.put(config.MTCBridge + "/mrc402/burn/" + req.params.mrc402id,
         req.body,
         function (err, response) { default_txresponse_process(err, req, res, response); });
 }
@@ -121,7 +130,7 @@ function post_mrc402_melt(req, res) {
     ParameterCheck(req.body, 'signature');
     ParameterCheck(req.body, 'tkey');
 
-    request.post(config.MTCBridge + "/mrc402/melt/" + req.params.mrc402id,
+    http_request.post(config.MTCBridge + "/mrc402/melt/" + req.params.mrc402id,
         req.body,
         function (err, response) { default_txresponse_process(err, req, res, response); });
 }
@@ -139,7 +148,7 @@ function post_mrc402_sell(req, res) {
     ParameterCheck(req.body, 'signature');
     ParameterCheck(req.body, 'tkey');
 
-    request.post(config.MTCBridge + "/mrc402/sell/" + req.params.mrc402id,
+    http_request.post(config.MTCBridge + "/mrc402/sell/" + req.params.mrc402id,
         req.body,
         function (err, response) { default_txresponse_process(err, req, res, response, "mrc402dexid"); });
 }
@@ -148,7 +157,7 @@ function post_mrc402_unsell(req, res) {
     ParameterCheck(req.body, 'signature');
     ParameterCheck(req.body, 'tkey');
 
-    request.post(config.MTCBridge + "/mrc402/unsell/" + req.params.mrc402dexid,
+    http_request.post(config.MTCBridge + "/mrc402/unsell/" + req.params.mrc402dexid,
         req.body,
         function (err, response) { default_txresponse_process(err, req, res, response); });
 }
@@ -159,7 +168,7 @@ function post_mrc402_buy(req, res) {
     ParameterCheck(req.body, 'amount', "int");
     ParameterCheck(req.body, 'tkey');
 
-    request.post(config.MTCBridge + "/mrc402/buy/" + req.params.mrc402dexid,
+    http_request.post(config.MTCBridge + "/mrc402/buy/" + req.params.mrc402dexid,
         req.body,
         function (err, response) { default_txresponse_process(err, req, res, response); });
 }
@@ -180,7 +189,7 @@ function post_mrc402_auction(req, res) {
     ParameterCheck(req.body, 'signature');
     ParameterCheck(req.body, 'tkey');
 
-    request.post(config.MTCBridge + "/mrc402/auction/" + req.params.mrc402id,
+    http_request.post(config.MTCBridge + "/mrc402/auction/" + req.params.mrc402id,
         req.body,
         function (err, response) { default_txresponse_process(err, req, res, response, "mrc402dexid"); })
 }
@@ -189,7 +198,7 @@ function post_mrc402_unauction(req, res) {
     ParameterCheck(req.body, 'signature');
     ParameterCheck(req.body, 'tkey');
 
-    request.post(config.MTCBridge + "/mrc402/unauction/" + req.params.mrc402dexid,
+    http_request.post(config.MTCBridge + "/mrc402/unauction/" + req.params.mrc402dexid,
         req.body,
         function (err, response) { default_txresponse_process(err, req, res, response); });
 }
@@ -200,18 +209,18 @@ function post_mrc402_bid(req, res) {
     ParameterCheck(req.body, 'signature');
     ParameterCheck(req.body, 'tkey');
 
-    request.post(config.MTCBridge + "/mrc402/bid/" + req.params.mrc402dexid,
+    http_request.post(config.MTCBridge + "/mrc402/bid/" + req.params.mrc402dexid,
         req.body,
         function (err, response) { default_txresponse_process(err, req, res, response); });
 }
 
 function get_mrc402_auctionfinish(req, res) {
-    request.get(config.MTCBridge + "/mrc402/auctionfinish/" + req.params.mrc402dexid,
+    http_request.get(config.MTCBridge + "/mrc402/auctionfinish/" + req.params.mrc402dexid,
         function (err, response) { default_txresponse_process(err, req, res, response); });
 }
 
 // mrc402 - A token called NFT
-router.get('/mrc402/:mrc402id', get_mrc402);
+router.get('/mrc402/:mrc402id', wrapRoute(get_mrc402));
 router.post('/mrc402', post_mrc402);
 router.post('/mrc402/transfer/:mrc402id', post_mrc402_transfer);
 router.put('/mrc402/update/:mrc402id', put_mrc402);
@@ -219,7 +228,7 @@ router.put('/mrc402/mint/:mrc402id', put_mrc402_mint);
 router.put('/mrc402/burn/:mrc402id', put_mrc402_burn);
 router.post('/mrc402/melt/:mrc402id', post_mrc402_melt);
 
-router.get('/mrc402/dex/:mrc402dexid', get_mrc402_dex);
+router.get('/mrc402/dex/:mrc402dexid', wrapRoute(get_mrc402_dex));
 router.post('/mrc402/sell/:mrc402id', post_mrc402_sell);
 router.post('/mrc402/unsell/:mrc402dexid', post_mrc402_unsell);
 router.post('/mrc402/buy/:mrc402dexid', post_mrc402_buy);

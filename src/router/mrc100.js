@@ -2,7 +2,7 @@
 const router = require('express').Router()
 const config = require('../../config.json');
 
-const {request} = require('../utils/lib.superagent')
+const { http_request } = require('../utils/lib.superagent')
 const { ParameterCheck } = require('../utils/lib')
 const { default_response_process } = require('../utils/lib.express')
 
@@ -15,7 +15,7 @@ function post_mrc100_payment(req, res) {
     ParameterCheck(req.body, 'gameid');
     ParameterCheck(req.body, 'gamememo');
 
-    request.post(config.MTCBridge + "/mrc100/payment",
+    http_request.post(config.MTCBridge + "/mrc100/payment",
         req.body,
         function (err, response) { default_response_process(err, req, res, response) });
 }
@@ -29,7 +29,7 @@ function post_mrc100_reward(req, res) {
     ParameterCheck(req.body, 'signature');
     ParameterCheck(req.body, 'tkey');
 
-    request.post(config.MTCBridge + "/mrc100/reward",
+    http_request.post(config.MTCBridge + "/mrc100/reward",
         req.body,
         function (err, response) { default_response_process(err, req, res, response) });
 }
@@ -43,21 +43,21 @@ function post_mrc100_log(req, res) {
     ParameterCheck(req.body, 'logger');
     ParameterCheck(req.body, 'signature');
 
-    request.post(config.MTCBridge + "/mrc100/log/" + req.params.tkey,
+    http_request.post(config.MTCBridge + "/mrc100/log/" + req.params.tkey,
         req.body,
         function (err, response) { default_response_process(err, req, res, response) });
 }
 
 
 function get_mrc100_log(req, res) {
-    request.get(config.MTCBridge + "/mrc100/log/" + req.params.mrc100key,
+    http_request.get(config.MTCBridge + "/mrc100/log/" + req.params.mrc100key,
         function (err, response) { default_response_process(err, req, res, response) });
 }
 
 function get_mrc100_logger(req, res) {
     ParameterCheck(req.params, 'token');
 
-    request.get(config.MTCBridge + "/mrc100/logger/" + req.params.token,
+    http_request.get(config.MTCBridge + "/mrc100/logger/" + req.params.token,
         req.body,
         function (err, response) { default_response_process(err, req, res, response) });
 }
@@ -68,7 +68,7 @@ function post_mrc100_logger(req, res) {
     ParameterCheck(req.body, 'address');
     ParameterCheck(req.body, 'signature');
 
-    request.post(config.MTCBridge + "/mrc100/logger/" + req.params.tkey,
+    http_request.post(config.MTCBridge + "/mrc100/logger/" + req.params.tkey,
         req.body,
         function (err, response) { default_response_process(err, req, res, response) });
 }
@@ -79,12 +79,10 @@ function delete_mrc100_logger(req, res) {
     ParameterCheck(req.body, 'address');
     ParameterCheck(req.body, 'signature');
 
-    request.delete(config.MTCBridge + "/mrc100/logger/" + req.params.tkey,
+    http_request.delete(config.MTCBridge + "/mrc100/logger/" + req.params.tkey,
         req.body,
         function (err, response) { default_response_process(err, req, res, response) });
 }
-
-
 
 // mrc100
 router.post('/mrc100/payment', post_mrc100_payment);
@@ -94,6 +92,5 @@ router.get('/mrc100/log/:mrc100key', get_mrc100_log);
 router.get('/mrc100/logger/:token', get_mrc100_logger);
 router.post('/mrc100/logger/:tkey', post_mrc100_logger);
 router.delete('/mrc100/logger/:tkey', delete_mrc100_logger);
-
 
 module.exports = router

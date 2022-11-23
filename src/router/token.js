@@ -3,105 +3,130 @@ const router = require('express').Router()
 const config = require('../../config.json');
 const BigNumber = require('bignumber.js')
 
-const { request } = require('../utils/lib.superagent')
+const { http_request } = require('../utils/lib.superagent')
 const { logger } = require('../utils/lib.winston')
 
 const { NumberPadding,
     ParameterCheck } = require('../utils/lib')
-const { default_txresponse_process,
+const { wrapRoute,
+    default_txresponse_process,
     default_response_process,
-    response } = require('../utils/lib.express')
+    default_response } = require('../utils/lib.express')
 
-function get_token(req, res) {
-    req.db.get('TOKEN:DB:' + NumberPadding(req.params.token_id), { asBuffer: false }, (isError, value) => {
-        if (isError) {
-            logger.error(err);
-            response(req, res, 404, 'Token ' + req.params.token_id + ' not found');
-            return;
+async function get_token(req, res) {
+    ParameterCheck(req.params, 'token_id');
+    let token_info
+    let token_json
+    try {
+        token_json = await req.db.get('TOKEN:DB:' + NumberPadding(req.params.token_id), { asBuffer: false })
+        token_info = JSON.parse(token_json)
+    } catch (err) {
+        if (err.notFound) {
+            default_response(req, res, 404, 'Token ' + req.params.token_id + ' not found')
+            return
+        } else {
+            throw err
         }
-        var data = JSON.parse(value);
-        if (data.type === undefined || data.type == "") {
-            data.type = "010";
-        }
-        data.circulation_supply = BigNumber(data.totalsupply);
-        req.db.get('ADDRESS:CURRENT:' + data.owner, { asBuffer: false }, (isError, value) => {
-            if (isError) {
-                logger.error(err);
-                response(req, res, 200, JSON.stringify(data));
-                return;
-            }
+    }
 
-            var a = JSON.parse(value);
-            for (var k in a.pending) {
-                a.balance.push({
-                    balance: "0",
-                    token: k,
-                    unlockdate: "0",
-                    pending: a.pending[k]
-                });
-            }
-            var tx;
-            for (var t in a.balance) {
-                if (a.balance[t].token != req.params.token_id) {
-                    continue;
-                }
-                try {
-                    tx = BigNumber(a.balance[t].balance);
-                } catch (err) {
-                    logger.error(err);
-                    continue;
-                }
-                data.circulation_supply = data.circulation_supply.minus(tx);
-            }
-            response(req, res, 200, JSON.stringify(data));
+    if (token_info.type === undefined || token_info.type == "") {
+        token_info.type = "010";
+    }
+    token_info.circulation_supply = BigNumber(token_info.totalsupply);
+
+    let owner_info
+    try {
+        let owner_json = await req.db.get('ADDRESS:CURRENT:' + token_info.owner, { asBuffer: false })
+        owner_info = JSON.parse(owner_json)
+    } catch (err) {
+        if (err.notFound) {
+            default_response(req, res, 200, JSON.stringify(token_json));
+            return
+        } else {
+            throw err
+        }
+    }
+
+    for (var token_id in owner_info.pending) {
+        owner_info.balance.push({
+            balance: "0",
+            token: k,
+            unlockdate: "0",
+            pending: owner_info.pending[token_id]
         });
-    });
+    }
+    var tx;
+    for (var t in owner_info.balance) {
+        if (owner_info.balance[t].token != req.params.token_id) {
+            continue;
+        }
+        try {
+            tx = BigNumber(owner_info.balance[t].balance);
+        } catch (err) {
+            logger.error(err);
+            continue;
+        }
+
+        token_info.circulation_supply = token_info.circulation_supply.minus(tx);
+    }
+    default_response(req, res, 200, JSON.stringify(token_info));
 }
 
-function get_totalsupply(req, res) {
-    req.db.get('TOKEN:DB:' + NumberPadding(req.params.token_id), { asBuffer: false }, (isError, value) => {
-        if (isError) {
-            logger.error(err);
-            response(req, res, 404, 'Token ' + req.params.token_id + ' not found');
-            return;
+async function get_totalsupply(req, res) {
+    let token_info
+    try {
+        let token_json = await req.db.get('TOKEN:DB:' + NumberPadding(req.params.token_id), { asBuffer: false })
+        token_info = JSON.parse(token_json)
+    } catch (err) {
+        if (err.notFound) {
+            default_response(req, res, 404, 'Token ' + req.params.token_id + ' not found');
+            return
+        } else {
+            throw err
         }
+    }
 
-        var data = JSON.parse(value);
-        if (data.type === undefined || data.type == "") {
-            data.type = "010";
+    if (token_info.type === undefined || token_info.type == "") {
+        token_info.type = "010";
+    }
+    token_info.circulation_supply = BigNumber(token_info.totalsupply);
+
+
+    let owner_info
+    try {
+        let owner_json = await req.db.get('ADDRESS:CURRENT:' + token_info.owner, { asBuffer: false })
+        owner_info = JSON.parse(owner_json)
+    } catch (err) {
+        if (err.notFound) {
+            default_response(req, res, 200, JSON.stringify(token_json));
+            return
+        } else {
+            throw err
         }
-        data.circulation_supply = BigNumber(data.totalsupply);
-        req.db.get('ADDRESS:CURRENT:' + data.owner, { asBuffer: false }, (isError, value) => {
-            if (isError) {
-                logger.error(err);
-                response(req, res, 200, JSON.stringify(data));
-                return;
-            }
-            var a = JSON.parse(value);
-            for (var k in a.pending) {
-                a.balance.push({
-                    balance: "0",
-                    token: k,
-                    unlockdate: "0",
-                    pending: a.pending[k]
-                });
-            }
-            var tx;
-            for (var t in a.balance) {
-                if (a.balance[t].token != req.params.token_id) {
-                    continue;
-                }
-                try {
-                    tx = BigNumber(a.balance[t].balance);
-                } catch (err) {
-                    logger.error(err);
-                    continue;
-                }
-                data.circulation_supply = data.circulation_supply.minus(tx);
-            }
-            response(req, res, 200, "" + data.circulation_supply / Math.pow(10, data.decimal));
+    }
+
+    for (var token_id in owner_info.pending) {
+        owner_info.balance.push({
+            balance: "0",
+            token: k,
+            unlockdate: "0",
+            pending: owner_info.pending[token_id]
         });
-    });
+    }
+    var tx;
+    for (var t in owner_info.balance) {
+        if (owner_info.balance[t].token != req.params.token_id) {
+            continue;
+        }
+        try {
+            tx = BigNumber(owner_info.balance[t].balance);
+        } catch (err) {
+            logger.error(err);
+            continue;
+        }
+        token_info.circulation_supply = token_info.circulation_supply.minus(tx);
+    }
+    default_response(req, res, 200, "" + token_info.circulation_supply / Math.pow(10, token_info.decimal));
 }
 
 function post_token(req, res) {
@@ -121,7 +146,7 @@ function post_token(req, res) {
             tier.tiersn = parseInt(tier_sn);
             tier_sn = tier_sn + 1;
             if (tier.rate === undefined || tier.rate == '') {
-                response(req, res, 412, 'Tier rate not defined');
+                default_response(req, res, 412, 'Tier rate not defined');
             }
             tier.rate = parseInt(tier.rate);
             tier.unlockdate = parseInt(tier.unlockdate);
@@ -134,21 +159,17 @@ function post_token(req, res) {
     }
 
     req.body.decimal = parseInt(req.body.decimal);
-    request.post(config.MTCBridge + "/token",
+    http_request.post(config.MTCBridge + "/token",
         req.body,
         function (err, response) { default_response_process(err, req, res, response) });
 }
-
 
 function post_token_save(req, res) {
     ParameterCheck(req.body, 'signature');
-    request.post(config.MTCBridge + "/token/" + req.params.tkey,
+    http_request.post(config.MTCBridge + "/token/" + req.params.tkey,
         req.body,
         function (err, response) { default_response_process(err, req, res, response) });
 }
-
-
-
 
 function put_token(req, res) {
     ParameterCheck(req.body, 'signature');
@@ -177,7 +198,7 @@ function put_token(req, res) {
         params['image'] = "";
     }
 
-    request.put(config.MTCBridge + "/token/update/" + req.params.tkey,
+    http_request.put(config.MTCBridge + "/token/update/" + req.params.tkey,
         params,
         function (err, response) { default_response_process(err, req, res, response) });
 }
@@ -190,7 +211,7 @@ function post_token_burn(req, res) {
     ParameterCheck(req.body, 'memo', "string", true);
     ParameterCheck(req.params, 'tkey');
 
-    request.put(config.MTCBridge + "/token/burn/" + req.params.tkey,
+    http_request.put(config.MTCBridge + "/token/burn/" + req.params.tkey,
         req.body,
         function (err, response) { default_response_process(err, req, res, response) });
 }
@@ -203,7 +224,7 @@ function post_token_increase(req, res) {
     ParameterCheck(req.body, 'memo', "string", true);
     ParameterCheck(req.params, 'tkey');
 
-    request.put(config.MTCBridge + "/token/increase/" + req.params.tkey,
+    http_request.put(config.MTCBridge + "/token/increase/" + req.params.tkey,
         req.body,
         function (err, response) { default_response_process(err, req, res, response) });
 }
@@ -219,7 +240,7 @@ function post_transfer(req, res) {
     if (req.body.unlockdate === undefined) {
         req.body.unlockdate = 0;
     }
-    request.post(config.MTCBridge + "/transfer",
+    http_request.post(config.MTCBridge + "/transfer",
         req.body,
         function (err, response) { default_response_process(err, req, res, response) });
 }
@@ -257,10 +278,11 @@ function post_multitransfer(req, res, next) {
         }
     }
 
-    request.post(config.MTCBridge + "/multitransfer",
+    http_request.post(config.MTCBridge + "/multitransfer",
         req.body,
         function (err, response) { default_response_process(err, req, res, response,) });
 }
+
 function post_exchange(req, res) {
     ParameterCheck(req.body, 'fromAddr');
     ParameterCheck(req.body, 'fromAmount');
@@ -283,20 +305,28 @@ function post_exchange(req, res) {
     ParameterCheck(req.body, 'toSign');
     ParameterCheck(req.params, 'toTkey');
 
-    request.post(config.MTCBridge + "/exchange/" + req.params.fromTkey + "/" + req.params.toTkey,
+    http_request.post(config.MTCBridge + "/exchange/" + req.params.fromTkey + "/" + req.params.toTkey,
         req.body,
         function (err, response) { default_response_process(err, req, res, response) });
 }
 
-function get_mrc010_dex(req, res) {
+async function get_mrc010_dex(req, res) {
     ParameterCheck(req.params, 'mrc010dexid');
-    req.db.get('MRC010DEX:DB:' + req.params.mrc010dexid, { asBuffer: false }, (isError, value) => {
-        if (isError) {
-            response(req, res, 404, 'MRC010DEX ' + req.params.mrc010dexid + ' not found');
+
+    try {
+        let mrc010dex_json = await req.db.get('MRC010DEX:DB:' + req.params.mrc010dexid, { asBuffer: false })
+        default_response(req, res, 200, mrc010dex_json);
+    } catch (err) {
+        
+        if (err.notFound) {
+            http_request.get(config.MTCBridge + "/token/dex/" + req.params.mrc010dexid,
+                function (err, response) {
+                    default_response_process(err, req, res, response, 'MRC010DEX:DB:' + req.params.mrc010dexid)
+                });
         } else {
-            response(req, res, 200, value);
+            throw err
         }
-    });
+    }
 }
 
 function post_token_sell(req, res) {
@@ -313,7 +343,7 @@ function post_token_sell(req, res) {
     ParameterCheck(req.body, 'signature');
     ParameterCheck(req.body, 'tkey');
 
-    request.post(config.MTCBridge + "/token/sell/" + req.params.mrc010id,
+    http_request.post(config.MTCBridge + "/token/sell/" + req.params.mrc010id,
         req.body,
         function (err, response) { default_txresponse_process(err, req, res, response, "mrc010dexid"); });
 }
@@ -322,7 +352,7 @@ function post_token_unsell(req, res) {
     ParameterCheck(req.body, 'signature');
     ParameterCheck(req.body, 'tkey');
 
-    request.post(config.MTCBridge + "/token/unsell/" + req.params.mrc010dexid,
+    http_request.post(config.MTCBridge + "/token/unsell/" + req.params.mrc010dexid,
         req.body,
         function (err, response) { default_txresponse_process(err, req, res, response); });
 }
@@ -333,7 +363,7 @@ function post_token_buy(req, res) {
     ParameterCheck(req.body, 'amount', "int");
     ParameterCheck(req.body, 'tkey');
 
-    request.post(config.MTCBridge + "/token/buy/" + req.params.mrc010dexid,
+    http_request.post(config.MTCBridge + "/token/buy/" + req.params.mrc010dexid,
         req.body,
         function (err, response) { default_txresponse_process(err, req, res, response); });
 }
@@ -352,7 +382,7 @@ function post_token_reqsell(req, res) {
     ParameterCheck(req.body, 'signature');
     ParameterCheck(req.body, 'tkey');
 
-    request.post(config.MTCBridge + "/token/reqsell/" + req.params.mrc010id,
+    http_request.post(config.MTCBridge + "/token/reqsell/" + req.params.mrc010id,
         req.body,
         function (err, response) { default_txresponse_process(err, req, res, response, "mrc010dexid"); });
 }
@@ -361,7 +391,7 @@ function post_token_unreqsell(req, res) {
     ParameterCheck(req.body, 'signature');
     ParameterCheck(req.body, 'tkey');
 
-    request.post(config.MTCBridge + "/token/unreqsell/" + req.params.mrc010dexid,
+    http_request.post(config.MTCBridge + "/token/unreqsell/" + req.params.mrc010dexid,
         req.body,
         function (err, response) { default_txresponse_process(err, req, res, response); });
 }
@@ -372,14 +402,14 @@ function post_token_acceptreqsell(req, res) {
     ParameterCheck(req.body, 'amount', "int");
     ParameterCheck(req.body, 'tkey');
 
-    request.post(config.MTCBridge + "/token/acceptreqsell/" + req.params.mrc010dexid,
+    http_request.post(config.MTCBridge + "/token/acceptreqsell/" + req.params.mrc010dexid,
         req.body,
         function (err, response) { default_txresponse_process(err, req, res, response); });
 }
 
 // token
-router.get('/token/:token_id', get_token);
-router.get('/totalsupply/:token_id', get_totalsupply);
+router.get('/token/:token_id', wrapRoute(get_token));
+router.get('/totalsupply/:token_id', wrapRoute(get_totalsupply));
 router.post('/token', post_token);
 router.put('/token/update/:tkey', put_token);
 router.post('/token/:tkey', post_token_save);
@@ -395,7 +425,7 @@ router.post('/token/reqsell/:mrc010id', post_token_reqsell);
 router.post('/token/unreqsell/:mrc010dexid', post_token_unreqsell);
 router.post('/token/acceptreqsell/:mrc010dexid', post_token_acceptreqsell);
 
-router.get('/token/dex/:mrc010dexid', get_mrc010_dex);
+router.get('/token/dex/:mrc010dexid', wrapRoute(get_mrc010_dex));
 
 // transfer and exchange
 router.post('/transfer', post_transfer);
