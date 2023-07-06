@@ -67,13 +67,13 @@ function post_mrc400(req, res) {
 function put_mrc400(req, res) {
     ParameterCheck(req.params, 'mrc400id');
     ParameterCheck(req.body, 'name', 'string', true, 0, 128);
-    ParameterCheck(req.body, 'url', "url", 0, 255);
-    ParameterCheck(req.body, 'imageurl', "url", 0, 255);
-    ParameterCheck(req.body, "allowtoken", "int", 1, 40);
+    ParameterCheck(req.body, 'url', "url", false, 0, 255);
+    ParameterCheck(req.body, 'imageurl', "url", false, 0, 255);
+    ParameterCheck(req.body, "allowtoken", "int", false, 1, 40);
     ParameterCheck(req.body, 'category', 'string', true, 0, 64);
     ParameterCheck(req.body, 'description', 'string', true, 0, 4096);
-    ParameterCheck(req.body, 'itemurl', "url", 0, 255);
-    ParameterCheck(req.body, 'itemimageurl', "url", 0, 255);
+    ParameterCheck(req.body, 'itemurl', "url", false, 0, 255);
+    ParameterCheck(req.body, 'itemimageurl', "url", false, 0, 255);
     ParameterCheck(req.body, 'data', 'string', true, 0, 4096);
     ParameterCheck(req.body, 'signature');
     ParameterCheck(req.body, 'tkey');

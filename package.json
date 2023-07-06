@@ -16,11 +16,11 @@
         "dependencies": {
                 "bignumber.js": "^9.1.0",
                 "crc": "^4.1.1",
-                "express": "^4.18.1",
+                "express": "^4.18.0",
                 "level-rocksdb": "^5.0.0",
-                "superagent": "8.0.3",
-                "winston": "^3.8.1",
-                "yarn": "^1.22.19"
+                "superagent": "^8.0.0",
+                "winston": "^3.8.0",
+                "yarn": "^1.22.0"
         },
         "scripts": {
                 "start": "nodemon mtcnode.js"
