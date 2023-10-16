@@ -32,7 +32,7 @@ async function get_mrc031(req, res) {
 
 function post_mrc030(req, res) {
     ParameterCheck(req.body, 'owner', "address");
-    ParameterCheck(req.body, 'title', "", false, 1, 256);
+    ParameterCheck(req.body, 'title', "", false, 1, 255);
     ParameterCheck(req.body, 'description', "", false, 0, 2048);
     ParameterCheck(req.body, 'startdate', "int");
     ParameterCheck(req.body, 'enddate', "int");
