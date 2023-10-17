@@ -6,3 +6,4 @@ CVS/*
 *.bak
 config.json
 block_addr.json
+yarn.lock

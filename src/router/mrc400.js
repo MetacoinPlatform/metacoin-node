@@ -81,7 +81,6 @@ function put_mrc400(req, res) {
     ParameterCheck(req.body, 'data', "string", false, 1, 40960);
     ParameterCheck(req.body, 'signature');
     ParameterCheck(req.body, 'tkey');
-
     http_request.put(config.MTCBridge + "/mrc400/" + req.params.mrc400id,
         req.body,
         function (err, response) { default_txresponse_process(err, req, res, response); });
