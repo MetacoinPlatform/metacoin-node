@@ -138,6 +138,11 @@ class MetacoinBlockProcessor {
 				case "tokenBurning":
 				case "tokenUpdate":
 				case "tokenIncrease":
+
+
+				case "tokenAddTarget":
+				case "SetBase":
+				case "tokenAddTarget":
 					logger.debug('MRC010 update %s', txData.parameters[0]);
 					save_data.push({
 						type: 'put',
@@ -222,6 +227,7 @@ class MetacoinBlockProcessor {
 						key: "MRC400:DB:" + txData.parameters[0],
 						value: JSON.stringify(txData.values)
 					});
+					break;
 
 				case "mrc401_create":
 				case "mrc401_update":
