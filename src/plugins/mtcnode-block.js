@@ -79,13 +79,16 @@ class MetacoinBlockProcessor {
 				case "transfer_mrc010item":
 				case "stodexRegister":
 				case "mrc030create":
+
 				case "transfer_mrc401buy":  // MRC401 buyer update
+				case "transfer_mrc401createtrade":
 				case "transfer_mrc401bid":
 				case "transfer_mrc800take":
 				case "transfer_mrc800":
 				case "transfer_mrc402":
 				case "transfer_mrc402buy":
 				case "transfer_mrc402bid":
+
 				case "stodexRegister":
 				case "stodexUnRegister":
 				case "stodexExchangePending":
@@ -230,6 +233,7 @@ class MetacoinBlockProcessor {
 					break;
 
 				case "mrc401_create":
+				case "mrc401_createtrade":
 				case "mrc401_update":
 				case "mrc401_transfer":
 
@@ -306,6 +310,7 @@ class MetacoinBlockProcessor {
 				case "mrc400create":
 				case "mrc400update":
 				case "mrc401create":
+				case "mrc401createtrade":
 				case "mrc401update":
 				case "mrc401transfer":
 				case "mrc401sell":
