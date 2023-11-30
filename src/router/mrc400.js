@@ -240,10 +240,6 @@ router.post('/mrc400', post_mrc400);
 router.put('/mrc400/:mrc400id', put_mrc400);
 
 // mrc401 - NFT
-router.get('/mrc401/:mrc401id', wrapRoute(get_mrc401));
-router.post('/mrc401/:mrc400id', post_mrc401);
-router.put('/mrc401/:mrc400id', put_mrc401);
-
 router.post('/mrc401/transfer/:mrc401id', post_mrc401_transfer);
 router.post('/mrc401/sell', post_mrc401_sell);
 router.post('/mrc401/unsell', post_mrc401_unsell);
@@ -254,5 +250,10 @@ router.post('/mrc401/auction', post_mrc401_auction);
 router.post('/mrc401/unauction', post_mrc401_unauction);
 router.get('/mrc401/auctionfinish/:mrc401id', get_mrc401_auctionfinish);
 router.post('/mrc401/createtrade/:mrc400id', post_mrc401_createtrade);
+
+// general url
+router.get('/mrc401/:mrc401id', wrapRoute(get_mrc401));
+router.post('/mrc401/:mrc400id', post_mrc401);
+router.put('/mrc401/:mrc400id', put_mrc401);
 
 module.exports = router
