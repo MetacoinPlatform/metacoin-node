@@ -14,13 +14,12 @@
                 "MTC"
         ],
         "dependencies": {
-                "bignumber.js": "^9.1.0",
-                "crc": "^4.1.1",
-                "express": "^4.18.0",
+                "bignumber.js": "^11.1.1",
+                "crc": "^4.3.2",
+                "express": "^5.2.1",
                 "level-rocksdb": "^5.0.0",
-                "superagent": "^8.0.0",
-                "winston": "^3.8.0",
-                "yarn": "^1.22.0"
+                "superagent": "^10.3.0",
+                "winston": "^3.19.0"
         },
         "scripts": {
                 "start": "nodemon mtcnode.js"
@@ -49,5 +48,6 @@
         },
         "devDependencies": {
                 "nodemon": "^2.0.19"
-        }
+        },
+        "packageManager": "yarn@4.14.1"
 }
