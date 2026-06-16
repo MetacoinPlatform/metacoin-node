@@ -49,5 +49,6 @@
         },
         "devDependencies": {
                 "nodemon": "^2.0.19"
-        }
+        },
+        "packageManager": "yarn@4.17.0"
 }
