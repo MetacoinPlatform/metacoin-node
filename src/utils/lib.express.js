@@ -135,7 +135,11 @@ function txresponse_process_v2(error, req, res, body, extra_key) {
 
 function default_response(req, res, status_code, return_data) {
     let ip = req.headers['x-forwarded-for'] || req.ip
-    ip = ip.replace('::ffff:', '').replace('::1', '127.0.0.1')
+    if (typeof(ip) != undefined) {
+        ip = ip.replace('::ffff:', '').replace('::1', '127.0.0.1')
+    } else {
+        ip = "unknown"
+    }
     let agent = req.headers['user-agent'] || '-'
     let nowTS = new Date().getTime();
 

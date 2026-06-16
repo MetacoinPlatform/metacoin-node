@@ -1,56 +1,56 @@
 {
-        "name": "metacoin-node",
-        "version": "2.3.0",
-        "main": "mtcnode.js",
-        "description": "MetaCoin Node",
-        "license": "MIT",
-        "repository": {
-                "type": "git",
-                "url": "http://metacoin.network"
-        },
-        "author": "Inblock",
-        "keywords": [
-                "MetaCoin",
-                "MTC"
-        ],
-        "dependencies": {
-                "bignumber.js": "^11.1.1",
-                "crc": "^4.3.2",
-                "express": "^5.2.1",
-                "level-rocksdb": "^5.0.0",
-                "superagent": "^10.3.0",
-                "winston": "^3.19.0"
-        },
-        "scripts": {
-                "start": "nodemon mtcnode.js"
-        },
-        "eslintConfig": {
-                "root": true,
-                "env": {
-                        "node": true
-                },
-                "extends": [
-                        "eslint:recommended"
-                ],
-                "parserOptions": {
-                        "ecmaVersion": 2015,
-                        "parser": "babel-eslint",
-                        "sourceType": "module"
-                },
-                "rules": {
-                        "no-unused-vars": [
-                                "warn",
-                                {
-                                        "vars": "all"
-                                }
-                        ]
-                }
-        },
-        "devDependencies": {
-                "nodemon": "^2.0.19"
-        },
-        "packageManager": "yarn@4.17.0",
-        "engines": {
-                "node": "22.x"
-        }
+	"name": "metacoin-node",
+	"version": "2.3.0",
+	"main": "mtcnode.js",
+	"description": "MetaCoin Node",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "http://metacoin.network"
+	},
+	"author": "Inblock",
+	"keywords": [
+		"MetaCoin",
+		"MTC"
+	],
+	"dependencies": {
+		"bignumber.js": "^11.1.1",
+		"crc": "^4.3.2",
+		"express": "^5.2.1",
+		"level-rocksdb": "^5.0.0",
+		"superagent": "^10.3.0",
+		"winston": "^3.19.0"
+	},
+	"scripts": {
+		"start": "nodemon mtcnode.js"
+	},
+	"eslintConfig": {
+		"root": true,
+		"env": {
+			"node": true
+		},
+		"extends": [
+			"eslint:recommended"
+		],
+		"parserOptions": {
+			"ecmaVersion": 2015,
+			"parser": "babel-eslint",
+			"sourceType": "module"
+		},
+		"rules": {
+			"no-unused-vars": [
+				"warn",
+				{
+					"vars": "all"
+				}
+			]
+		}
+	},
+	"devDependencies": {
+		"nodemon": "^2.0.19"
+	},
+	"packageManager": "yarn@4.17.0",
+	"engines": {
+		"node": "22.x"
+	}
 }
