@@ -11,3 +11,5 @@ block_addr.json
 
 .pnp.*
 
+yarn-error.log
+.yarn/install-state.gz

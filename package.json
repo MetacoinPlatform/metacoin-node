@@ -14,15 +14,17 @@
 		"MTC"
 	],
 	"dependencies": {
-		"bignumber.js": "^11.1.1",
+		"bignumber.js": "^11.1.4",
+		"body-parser": "^2.3.0",
 		"crc": "^4.3.2",
 		"express": "^5.2.1",
+		"ioredis": "^5.11.1",
 		"level-rocksdb": "^5.0.0",
+		"md5": "^2.3.0",
+		"multer": "^2.2.0",
+		"promise": "^8.3.0",
 		"superagent": "^10.3.0",
 		"winston": "^3.19.0"
-	},
-	"scripts": {
-		"start": "nodemon mtcnode.js"
 	},
 	"eslintConfig": {
 		"root": true,
@@ -46,11 +48,8 @@
 			]
 		}
 	},
-	"devDependencies": {
-		"nodemon": "^2.0.19"
-	},
-	"packageManager": "yarn@4.17.0",
 	"engines": {
-		"node": "22.x"
-	}
+		"node": ">=20.0.0"
+	},
+	"packageManager": "yarn@4.17.0"
 }

@@ -14,41 +14,40 @@ const { errorHandler } = require('./src/utils/lib.express')
 const pluginRocksDB = require('./src/plugins/express-rocksdb')
 const rocksDB = pluginRocksDB(config.DB_PATH)
 
-const  MetacoinBlockProcessor  = require('./src/plugins/mtcnode-block')
+const MetacoinBlockProcessor = require('./src/plugins/mtcnode-block')
 
 // setup express
 const app = express()
 app.disable('x-powered-by')
 app.use(express.json({
-    limit: '50mb'
+	limit: '50mb'
 }))
 
 app.use(express.urlencoded({
-    limit: '50mb',
-    extended: true
+	limit: '50mb',
+	extended: true
 }));
 
 // Save request time
 app.use((req, res, next) => {
-    req.requestTime = new Date()
-    next()
+	req.requestTime = new Date()
+	next()
 });
 
 // rocksdb
 app.use(rocksDB)
 app.use(MetacoinBlockProcessor(rocksDB))
 
-// Add Router 
+// Add Router
 app.use(require('./src/router'))
 
-// error handler 
+// error handler
 app.use(errorHandler);
-
 try {
-    app.listen(config.port, () => {
-        logger.info('%s %s listening on port %d', app_title, app_ver, config.port);
-    });
+	app.listen(config.port, () => {
+		logger.info('%s %s listening on port %d', app_title, app_ver, config.port);
+	});
 } catch (err) {
-    logger.error(err)
-    logger.error('%s %s port %d bind error', app_title, app_ver, config.port);
+	logger.error(err)
+	logger.error('%s %s port %d bind error', app_title, app_ver, config.port);
 }
