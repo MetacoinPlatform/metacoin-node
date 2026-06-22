@@ -39,7 +39,7 @@ class MetacoinBlockProcessor {
 				return true;
 			}
 		} catch (err) {
-			logger.error(err)
+			logger.error('Get Transaction error', err.message)
 			return true;
 		}
 
@@ -376,7 +376,7 @@ class MetacoinBlockProcessor {
 			let body = await http_request.get(config.MTCBridge + "/block/" + this.max_db_number)
 			data = JSON.parse(body.text);
 		} catch (err) {
-			logger.error(err)
+			logger.error('Get Block error', err.message)
 			setTimeout(this.getFabricBlock.bind(this), 1000);
 			return;
 		}
@@ -390,7 +390,6 @@ class MetacoinBlockProcessor {
 
 		for (let tx of data.data.transaction) {
 			tx_idx = tx_idx + 1;
-			console.log("Call get Transaction")
 			let txResult = await this.getTransactions(tx.id, data.data.id, data.data.sn, tx_idx)
 			if (txResult) {
 				setTimeout(this.getFabricBlock.bind(this), 1000);

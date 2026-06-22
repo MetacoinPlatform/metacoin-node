@@ -1,6 +1,6 @@
 {
 	"name": "metacoin-node",
-	"version": "2.3.0",
+	"version": "2.4.0",
 	"main": "mtcnode.js",
 	"description": "MetaCoin Node",
 	"license": "MIT",
@@ -15,16 +15,11 @@
 	],
 	"dependencies": {
 		"bignumber.js": "^11.1.4",
-		"body-parser": "^2.3.0",
 		"crc": "^4.3.2",
-		"express": "^5.2.1",
-		"ioredis": "^5.11.1",
+		"express": "^4.18.0",
 		"level-rocksdb": "^5.0.0",
-		"md5": "^2.3.0",
-		"multer": "^2.2.0",
-		"promise": "^8.3.0",
-		"superagent": "^10.3.0",
-		"winston": "^3.19.0"
+		"superagent": "^10.2.2",
+		"winston": "^2.4.7"
 	},
 	"eslintConfig": {
 		"root": true,
@@ -49,7 +44,6 @@
 		}
 	},
 	"engines": {
-		"node": ">=20.0.0"
-	},
-	"packageManager": "yarn@4.17.0"
+		"node": ">=16.0.0"
+	}
 }

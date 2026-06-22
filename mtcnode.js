@@ -2,8 +2,11 @@
 /* jshint node: true */
 "use strict";
 
-const app_ver = "ver 2.2.0"
-const app_title = "MetaCoin node"
+const { version, description } = require('./package.json');
+
+const app_ver = `ver ${version}`;
+const app_title = description;
+
 const config = require('./config.json')
 
 const express = require('express')
@@ -48,6 +51,6 @@ try {
 		logger.info('%s %s listening on port %d', app_title, app_ver, config.port);
 	});
 } catch (err) {
-	logger.error(err)
+	logger.error('App Start', err.message)
 	logger.error('%s %s port %d bind error', app_title, app_ver, config.port);
 }
